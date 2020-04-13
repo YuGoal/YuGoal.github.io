@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>RabbitMQ—Android客户端 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">RabbitMQ—Android客户端</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h2 id="工作原理">工作原理</h2>
+<p><a href="http://rabbitmq.mr-ping.com/description.html">RabbitMQ-中文文档</a><br>
+<a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ-官网</a><br>
+上面的网站详细的描述了整个框架。建议没接触过RabbitMQ的同学先看看。了解原理后，就直接看下面的代码吧。</p>
+<h2 id="生产者">生产者</h2>
+<p>由于后台缘故，这里不需要exchange。想要看完整的流程的同学可以去看<a href="http://www.jianshu.com/p/e138a79d726c">这篇文章</a>。<br>
+注意要在子线程中运行</p>
+<pre><code>        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost(HOST);//ip地址
+        factory.setPort(PORT);//端口号
+        factory.setUsername(&quot;test&quot;);
+        factory.setPassword(&quot;test&quot;);
+        //创建一个新连接
+        Connection connection = factory.newConnection();
+        //创建一个通道
+        Channel channel = connection.createChannel();
+        //声明一个队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        //发送消息
+        channel.basicPublish(&quot;&quot;, QUEUE_NAME, null, message.getBytes(&quot;UTF-8&quot;));
+        //消息发送完成后，需要关闭通道和连接
+        channel.close();
+        connection.close();
+</code></pre>
+<h2 id="消费者">消费者</h2>
+<pre><code>        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost(HOST);
+        factory.setPort(PORT);
+        factory.setUsername(&quot;test&quot;);
+        factory.setPassword(&quot;test&quot;);
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+
+        //声明一个队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        Consumer consumer = new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                String message = new String(body, &quot;UTF-8&quot;);
+                System.out.println(&quot;RecvLogsTopic1 [x] Received '&quot; + envelope.getRoutingKey() + &quot;':'&quot; + message + &quot;'&quot;);
+            }
+        };
+        channel.basicConsume(QUEUE_NAME, true, consumer);
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-yuan-sheng-api-jin-xing-di-mian-bian-ma-yu-ni-di-li-bian-ma/">
+              <h3 class="post-title">
+                下一篇：Android 原生Api进行地面编码与逆地理编码
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

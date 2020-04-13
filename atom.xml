@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://yugoal.github.io</id>
     <title>caoyu</title>
-    <updated>2020-04-13T02:01:56.898Z</updated>
+    <updated>2020-04-13T02:08:09.624Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://yugoal.github.io"/>
     <link rel="self" href="https://yugoal.github.io/atom.xml"/>
@@ -10,6 +10,1443 @@
     <logo>https://yugoal.github.io/images/avatar.png</logo>
     <icon>https://yugoal.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, caoyu</rights>
+    <entry>
+        <title type="html"><![CDATA[Gson 工具类]]></title>
+        <id>https://yugoal.github.io/post/gson-gong-ju-lei/</id>
+        <link href="https://yugoal.github.io/post/gson-gong-ju-lei/">
+        </link>
+        <updated>2020-04-13T02:07:58.000Z</updated>
+        <content type="html"><![CDATA[<p>工具类主体</p>
+<pre><code>public class GsonUtil {
+
+    private static Gson gson = new GsonBuilder()
+            .registerTypeAdapter(Integer.class, new IntegerDefault0Adapter())
+            .registerTypeAdapter(int.class, new IntegerDefault0Adapter())
+            .registerTypeAdapter(Double.class, new DoubleDefault0Adapter())
+            .registerTypeAdapter(double.class, new DoubleDefault0Adapter())
+            .registerTypeAdapter(Long.class, new LongDefault0Adapter())
+            .registerTypeAdapter(long.class, new LongDefault0Adapter())
+            .create();
+
+    public static String toJson(Object value) {
+        return gson.toJson(value);
+    }
+
+    public static &lt;T&gt; T fromJson(String json, Class&lt;T&gt; classOfT) throws JsonParseException {
+        return gson.fromJson(json, classOfT);
+    }
+
+    public static &lt;T&gt; T fromJson(String json, Type typeOfT) throws JsonParseException {
+        return (T) gson.fromJson(json, typeOfT);
+    }
+}
+</code></pre>
+<p>注册类型适配器（int 举例）</p>
+<pre><code>public class IntegerDefault0Adapter implements JsonSerializer&lt;Integer&gt;, JsonDeserializer&lt;Integer&gt; {
+    @Override
+    public Integer deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+        try {
+            if (json.getAsString().equals(&quot;&quot;) || json.getAsString().equals(&quot;null&quot;)) {//定义为int类型,如果后台返回&quot;&quot;或者null,则返回0
+                return 0;
+            }
+        } catch (Exception ignore) {
+        }
+        try {
+            return json.getAsInt();
+        } catch (NumberFormatException e) {
+            throw new JsonSyntaxException(e);
+        }
+    }
+
+    @Override
+    public JsonElement serialize(Integer src, Type typeOfSrc, JsonSerializationContext context) {
+        return new JsonPrimitive(src);
+    }
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android仿滴答清单左滑右滑效果]]></title>
+        <id>https://yugoal.github.io/post/android-fang-di-da-qing-dan-zuo-hua-you-hua-xiao-guo/</id>
+        <link href="https://yugoal.github.io/post/android-fang-di-da-qing-dan-zuo-hua-you-hua-xiao-guo/">
+        </link>
+        <updated>2020-04-13T02:07:19.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="直接上效果图">直接上效果图</h2>
+<figure data-type="image" tabindex="1"><img src="https://user-gold-cdn.xitu.io/2019/12/13/16efe8fb80379e01?w=433&amp;h=594&amp;f=gif&amp;s=235125" alt="" loading="lazy"></figure>
+<blockquote>
+<p>记录仿写滴答清单App 过程中的技术点</p>
+</blockquote>
+<h4 id="本文分为以下章节读者可按需阅读">本文分为以下章节，读者可按需阅读：</h4>
+<ul>
+<li>1.自定义RecycleItemTouchHelper</li>
+<li>2.实现滴答清单左滑右滑效果</li>
+<li>3.RecycleView使用自定义RecycleItemTouchHelper</li>
+</ul>
+<h2 id="一-itemtouchhelper使用">一、ItemTouchHelper使用</h2>
+<blockquote>
+<p>本章介绍下ItemTouchHelper的基本使用方法，主要是我们后面实现左滑右滑会用到的类和方法，拖拽方法暂时不详细描述。</p>
+</blockquote>
+<ul>
+<li>1.自定义RecycleItemTouchHelper类继承 ItemTouchHelper.Callback</li>
+</ul>
+<pre><code>public class RecycleItemTouchHelper extends ItemTouchHelper.Callback {
+    private static final String TAG = &quot;RecycleItemTouchHelper&quot;;
+    private Resources resources;
+    private int padding;//灰色背景的宽度padding
+    private int linePadding;//对勾的宽度
+    //            int maxDrawWidth=2*padding+bitmap.getWidth();//最大的绘制宽度
+    //背景画笔
+    private Paint paint;
+    private Paint mPaintTick;
+    //记录打钩路径的三个点坐标
+    private float[] mPoints = new float[8];
+
+    private ItemTouchHelperCallback helperCallback;
+
+
+    public RecycleItemTouchHelper(ItemTouchHelperCallback helperCallback) {
+        this.helperCallback = helperCallback;
+        resources = TodoApplication.getInstance().getResources();
+        padding = UiUtil.dip2px(TodoApplication.getInstance(), 60);//图片绘制的padding
+        linePadding = UiUtil.dip2px(TodoApplication.getInstance(), 16);//图片绘制的padding
+        //背景画笔
+        paint = new Paint();
+        mPaintTick = new Paint();
+        //对勾画笔
+        mPaintTick.setColor(resources.getColor(R.color.white));
+        mPaintTick.setStrokeCap(Paint.Cap.ROUND);
+        mPaintTick.setStrokeWidth(UiUtil.dip2px(TodoApplication.getInstance(), 2.4f));
+    }
+
+    /**
+     * 设置滑动类型标记
+     *
+     * @param recyclerView
+     * @param viewHolder
+     * @return 返回一个整数类型的标识，用于判断Item那种移动行为是允许的
+     */
+    @Override
+    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+        //START  右向左 END左向右 LEFT  向左 RIGHT向右  UP向上
+        //如果某个值传0，表示不触发该操作，次数设置支持上下拖拽，支持向右滑动
+        return makeMovementFlags(0, LEFT | RIGHT);
+    }
+
+
+    /**
+     * Item是否支持长按拖动
+     *
+     * @return true  支持长按操作
+     * false 不支持长按操作
+     */
+    @Override
+    public boolean isLongPressDragEnabled() {
+        return super.isLongPressDragEnabled();
+    }
+
+    /**
+     * Item是否支持滑动
+     *
+     * @return true  支持滑动操作
+     * false 不支持滑动操作
+     */
+    @Override
+    public boolean isItemViewSwipeEnabled() {
+        return super.isItemViewSwipeEnabled();
+    }
+
+    @Override
+    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+        return false;
+    }
+
+    @Override
+    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+        switch (direction) {
+            case LEFT:
+                //左滑
+                helperCallback.onItemL(viewHolder.getAdapterPosition());
+                break;
+            case RIGHT:
+                //右滑
+                helperCallback.onItemR(viewHolder.getAdapterPosition());
+                break;
+        }
+    }
+
+    @Override
+    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+       super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+    }
+
+    /**
+     * Item被选中时候回调
+     *
+     * @param viewHolder
+     * @param actionState 当前Item的状态
+     *                    ItemTouchHelper.ACTION_STATE_IDLE   闲置状态
+     *                    ItemTouchHelper.ACTION_STATE_SWIPE  滑动中状态
+     *                    ItemTouchHelper#ACTION_STATE_DRAG   拖拽中状态
+     */
+    @Override
+    public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+        super.onSelectedChanged(viewHolder, actionState);
+    }
+
+    //滑动接口回调
+    public interface ItemTouchHelperCallback {
+        void onItemR(int positon);
+        void onItemL(int positon);
+    }
+}
+</code></pre>
+<ul>
+<li>2.实现滴答清单右滑效果</li>
+</ul>
+<p><strong>重写onChildDraw方法</strong></p>
+<pre><code>@Override
+    public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+        //滑动时自己实现背景及图片
+        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+            //dX大于0时向右滑动，小于0向左滑动
+            View itemView = viewHolder.itemView;//获取滑动的view
+
+            int x = Math.round(Math.abs(dX));
+
+            //1.向右滑动
+            if (dX &gt; 0) {
+                if (x &gt; padding) {
+                    //滑动距离大于padding时开始变色
+                    paint.setColor(resources.getColor(R.color.bg_completed));
+                } else {
+                    //滑动距离小于padding时是灰色
+                    paint.setColor(resources.getColor(R.color.todo));
+                }
+                //2.根据滑动实时绘制一个背景
+                c.drawRect(itemView.getLeft(), itemView.getTop(), x, itemView.getBottom(), paint);
+                //3.绘制对勾
+                //指定对勾绘制的位置，一个对勾需要三个点
+                //每一项的高
+                int h = itemView.getBottom() - itemView.getTop();
+                mPoints[0] = x - ((padding / 2) + (linePadding / 2));
+                mPoints[1] = itemView.getTop() + h / 2;
+                mPoints[2] = x - padding / 2;
+                mPoints[3] = itemView.getTop() + (h / 2 + linePadding / 2);
+                mPoints[4] = x - padding / 2;
+                mPoints[5] = itemView.getTop() + (h / 2 + linePadding / 2);
+                mPoints[6] = (float) (x - linePadding);
+                mPoints[7] = itemView.getTop() + (h / 2 - linePadding /2);
+                c.drawLines(mPoints, mPaintTick);
+
+                //绘制时需调用平移动画，否则滑动看不到反馈
+                itemView.setTranslationX(dX);
+            } else {
+                //左滑效果和右滑一样，暂未实现。
+                paint.setColor(resources.getColor(R.color.bg_todo));
+                c.drawRect(itemView.getRight(), itemView.getTop(), itemView.getWidth() - x, itemView.getBottom(), paint);
+                //绘制时需调用平移动画，否则滑动看不到反馈
+                itemView.setTranslationX(dX);
+            }
+        } else {
+            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+        }
+    }
+</code></pre>
+<ul>
+<li>3.RecycleView使用自定义RecycleItemTouchHelper</li>
+</ul>
+<pre><code>        ItemTouchHelper.Callback callback = new RecycleItemTouchHelper(todoAdapter);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
+        itemTouchHelper.attachToRecyclerView(recyclerview);
+</code></pre>
+<h2 id="未完待续">未完待续</h2>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android计算任意多边形的面积]]></title>
+        <id>https://yugoal.github.io/post/android-ji-suan-ren-yi-duo-bian-xing-de-mian-ji/</id>
+        <link href="https://yugoal.github.io/post/android-ji-suan-ren-yi-duo-bian-xing-de-mian-ji/">
+        </link>
+        <updated>2020-04-13T02:07:02.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="需求">需求</h2>
+<p>线段：算出地图上线段的实际长度<br>
+面积：算出地图上不规则多边形的实际面积</p>
+<h2 id="解决方案">解决方案</h2>
+<p>####1.线段的实际长度<br>
+直接使用高德的AMapUtils.calculateLineDistance（latLng，latLng）方法计算。<br>
+####2.任意多边形面积的计算<br>
+思路：http://blog.csdn.net/xxdddail/article/details/48973269</p>
+<p>具体代码：</p>
+<pre><code> /**
+     * 计算任意多边形的面积
+     * @param latLngLines 经纬度坐标点
+     * @return
+     */
+    public float calculateArea(List&lt;LatLng&gt; latLngLines) {
+        List&lt;double[]&gt; pointFList = new ArrayList&lt;&gt;();
+        for (int i = 0; i &lt; latLngLines.size(); i++) {
+            LatLng latLng = latLngLines.get(i);
+            //经纬度转换成平面直角坐标系
+            pointFList.add(AMapUtil.WGS2flat(latLng.longitude, latLng.latitude));
+        }
+
+        int iCycle, iCount;
+        iCycle = 0;
+        double iArea = 0;
+        iCount = pointFList.size();
+
+        for (iCycle = 0; iCycle &lt; iCount; iCycle++) {
+            iArea = iArea + (pointFList.get(iCycle)[0] * pointFList.get((iCycle + 1) % iCount)[1] - pointFList.get((iCycle + 1) % iCount)[0] * pointFList.get(iCycle)[1]);
+        }
+
+        return (float) Math.abs(0.5 * iArea);
+    }
+</code></pre>
+<p>经纬度转平面直角坐标系</p>
+<pre><code> // 地球长半轴
+    public static final double EARTH_RADIUS = 6378.137;
+/**
+     * 经纬度转换成以米为单位的平面直角坐标
+     *
+     * @param lon 经度
+     * @param lat 纬度
+     * @return 平面直角坐标double型数组，以米为单位
+     */
+    public static double[] WGS2flat(double lon, double lat) {
+        double L = CalcRad(lon);
+        double l = L - CalcRad(120);
+        double B = CalcRad(lat);
+        double cosb = Math.cos(B);
+        double sinb = Math.sin(B);
+
+        double a = EARTH_RADIUS * 1000;
+        // 地球短半轴
+        double b = 6356752.3142451793;
+        double t = Math.tan(B);
+        // double r = 3600 * 180 / Math.PI;
+        double e2 = (Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(a, 2);
+        double e12 = (Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(b, 2);
+        double n2 = e12 * Math.pow(cosb, 2);
+        double N = a / Math.sqrt(1 - e2 * Math.pow(sinb, 2));
+
+        double x = 6367449.1458 * B - 32009.8185 * cosb * sinb - 133.9975
+                * cosb * Math.pow(sinb, 3) - 0.6975 * cosb * Math.pow(sinb, 5);
+        double X = x + N / 2 * t * Math.pow(cosb, 2) * Math.pow(l, 2) + N / 24
+                * t * Math.pow(cosb, 4)
+                * (5 - Math.pow(t, 2) + 9 * n2 + 4 * Math.pow(n2, 2))
+                * Math.pow(l, 4);
+        double Y = N * cosb * l + N / 6 * Math.pow(cosb, 3)
+                * (1 - Math.pow(t, 2) + n2) * Math.pow(l, 3);
+
+        double[] coord = {X, Y};
+        return coord;
+    }
+
+    /**
+     * 计算弧度
+     *
+     * @param d 以度为单位的经纬度数值
+     * @return 以弧度为单位的经纬度数值
+     */
+    public static double CalcRad(double d) {
+        return d * Math.PI / 180.0;
+    }
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[RabbitMQ—Android客户端]]></title>
+        <id>https://yugoal.github.io/post/rabbitmq-android-ke-hu-duan/</id>
+        <link href="https://yugoal.github.io/post/rabbitmq-android-ke-hu-duan/">
+        </link>
+        <updated>2020-04-13T02:06:43.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="工作原理">工作原理</h2>
+<p><a href="http://rabbitmq.mr-ping.com/description.html">RabbitMQ-中文文档</a><br>
+<a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ-官网</a><br>
+上面的网站详细的描述了整个框架。建议没接触过RabbitMQ的同学先看看。了解原理后，就直接看下面的代码吧。</p>
+<h2 id="生产者">生产者</h2>
+<p>由于后台缘故，这里不需要exchange。想要看完整的流程的同学可以去看<a href="http://www.jianshu.com/p/e138a79d726c">这篇文章</a>。<br>
+注意要在子线程中运行</p>
+<pre><code>        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost(HOST);//ip地址
+        factory.setPort(PORT);//端口号
+        factory.setUsername(&quot;test&quot;);
+        factory.setPassword(&quot;test&quot;);
+        //创建一个新连接
+        Connection connection = factory.newConnection();
+        //创建一个通道
+        Channel channel = connection.createChannel();
+        //声明一个队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        //发送消息
+        channel.basicPublish(&quot;&quot;, QUEUE_NAME, null, message.getBytes(&quot;UTF-8&quot;));
+        //消息发送完成后，需要关闭通道和连接
+        channel.close();
+        connection.close();
+</code></pre>
+<h2 id="消费者">消费者</h2>
+<pre><code>        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost(HOST);
+        factory.setPort(PORT);
+        factory.setUsername(&quot;test&quot;);
+        factory.setPassword(&quot;test&quot;);
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+
+        //声明一个队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        Consumer consumer = new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                String message = new String(body, &quot;UTF-8&quot;);
+                System.out.println(&quot;RecvLogsTopic1 [x] Received '&quot; + envelope.getRoutingKey() + &quot;':'&quot; + message + &quot;'&quot;);
+            }
+        };
+        channel.basicConsume(QUEUE_NAME, true, consumer);
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android 原生Api进行地面编码与逆地理编码]]></title>
+        <id>https://yugoal.github.io/post/android-yuan-sheng-api-jin-xing-di-mian-bian-ma-yu-ni-di-li-bian-ma/</id>
+        <link href="https://yugoal.github.io/post/android-yuan-sheng-api-jin-xing-di-mian-bian-ma-yu-ni-di-li-bian-ma/">
+        </link>
+        <updated>2020-04-13T02:06:17.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="废话不说直接上代码">废话不说，直接上代码</h1>
+<h2 id="异步执行编码转换">异步执行编码转换</h2>
+<pre><code>public class GeocodeAddressIntentService extends IntentService {
+
+protected ResultReceiver resultReceiver;
+private static final String TAG = &quot;GEO_ADDY_SERVICE&quot;;
+
+public GeocodeAddressIntentService() {
+    super(&quot;GeocodeAddressIntentService&quot;);
+}
+
+@Override
+protected void onHandleIntent(Intent intent) {
+    Log.e(TAG, &quot;onHandleIntent&quot;);
+    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+    String errorMessage = &quot;&quot;;
+    List&lt;Address&gt; addresses = null;
+
+    int fetchType = intent.getIntExtra(Constants.FETCH_TYPE_EXTRA, 0);
+    Log.e(TAG, &quot;fetchType == &quot; + fetchType);
+
+    if(fetchType == Constants.USE_ADDRESS_NAME) {
+        String name = intent.getStringExtra(Constants.LOCATION_NAME_DATA_EXTRA);
+        try {
+            addresses = geocoder.getFromLocationName(name, 1);
+        } catch (IOException e) {
+            errorMessage = &quot;Service not available&quot;;
+            Log.e(TAG, errorMessage, e);
+        }
+    }
+    else if(fetchType == Constants.USE_ADDRESS_LOCATION) {
+        double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
+        double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
+
+        try {
+            addresses = geocoder.getFromLocation(latitude, longitude, 1);
+        } catch (IOException ioException) {
+            errorMessage = &quot;Service Not Available&quot;;
+            Log.e(TAG, errorMessage, ioException);
+        } catch (IllegalArgumentException illegalArgumentException) {
+            errorMessage = &quot;Invalid Latitude or Longitude Used&quot;;
+            Log.e(TAG, errorMessage + &quot;. &quot; +
+                    &quot;Latitude = &quot; + latitude + &quot;, Longitude = &quot; +
+                    longitude, illegalArgumentException);
+        }
+    }
+    else {
+        errorMessage = &quot;Unknown Type&quot;;
+        Log.e(TAG, errorMessage);
+    }
+
+    resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
+    if (addresses == null || addresses.size()  == 0) {
+        if (errorMessage.isEmpty()) {
+            errorMessage = &quot;Not Found&quot;;
+            Log.e(TAG, errorMessage);
+        }
+        deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
+    } else {
+        for(Address address : addresses) {
+            String outputAddress = &quot;&quot;;
+            for(int i = 0; i &lt; address.getMaxAddressLineIndex(); i++) {
+                outputAddress += &quot; --- &quot; + address.getAddressLine(i);
+            }
+            Log.e(TAG, outputAddress);
+        }
+        Address address = addresses.get(0);
+        ArrayList&lt;String&gt; addressFragments = new ArrayList&lt;&gt;();
+
+        for(int i = 0; i &lt; address.getMaxAddressLineIndex(); i++) {
+            addressFragments.add(address.getAddressLine(i));
+        }
+        Log.i(TAG, &quot;Address Found&quot;);
+        deliverResultToReceiver(Constants.SUCCESS_RESULT,
+                TextUtils.join(System.getProperty(&quot;line.separator&quot;),
+                        addressFragments), address);
+    }
+}
+
+private void deliverResultToReceiver(int resultCode, String message, Address address) {
+    Bundle bundle = new Bundle();
+    bundle.putParcelable(Constants.RESULT_ADDRESS, address);
+    bundle.putString(Constants.RESULT_DATA_KEY, message);
+    resultReceiver.send(resultCode, bundle);
+}
+
+}	
+</code></pre>
+<h2 id="使用">使用</h2>
+<pre><code>public class MainActivity extends AppCompatActivity {
+
+AddressResultReceiver mResultReceiver;
+
+EditText latitudeEdit, longitudeEdit, addressEdit;
+ProgressBar progressBar;
+TextView infoText;
+CheckBox checkBox;
+
+boolean fetchAddress;
+int fetchType = Constants.USE_ADDRESS_LOCATION;
+
+private static final String TAG = &quot;MAIN_ACTIVITY&quot;;
+
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+
+    longitudeEdit = (EditText) findViewById(R.id.longitudeEdit);
+    latitudeEdit = (EditText) findViewById(R.id.latitudeEdit);
+    addressEdit = (EditText) findViewById(R.id.addressEdit);
+    progressBar = (ProgressBar) findViewById(R.id.progressBar);
+    infoText = (TextView) findViewById(R.id.infoText);
+    checkBox = (CheckBox) findViewById(R.id.checkbox);
+
+    mResultReceiver = new AddressResultReceiver(null);
+}
+
+public void onRadioButtonClicked(View view) {
+    boolean checked = ((RadioButton) view).isChecked();
+
+    switch (view.getId()) {
+        case R.id.radioAddress:
+            if (checked) {
+                fetchAddress = false;
+                fetchType = Constants.USE_ADDRESS_NAME;
+                longitudeEdit.setEnabled(false);
+                latitudeEdit.setEnabled(false);
+                addressEdit.setEnabled(true);
+                addressEdit.requestFocus();
+            }
+            break;
+        case R.id.radioLocation:
+            if (checked) {
+                fetchAddress = true;
+                fetchType = Constants.USE_ADDRESS_LOCATION;
+                latitudeEdit.setEnabled(true);
+                latitudeEdit.requestFocus();
+                longitudeEdit.setEnabled(true);
+                addressEdit.setEnabled(false);
+            }
+            break;
+    }
+}
+
+public void onButtonClicked(View view) {
+    Intent intent = new Intent(this, GeocodeAddressIntentService.class);
+    intent.putExtra(Constants.RECEIVER, mResultReceiver);
+    intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);
+    if (fetchType == Constants.USE_ADDRESS_NAME) {
+        if (addressEdit.getText().length() == 0) {
+            Toast.makeText(this, &quot;Please enter an address name&quot;, Toast.LENGTH_LONG).show();
+            return;
+        }
+        intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressEdit.getText().toString());
+    } else {
+        if (latitudeEdit.getText().length() == 0 || longitudeEdit.getText().length() == 0) {
+            Toast.makeText(this,
+                    &quot;Please enter both latitude and longitude&quot;,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        intent.putExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA,
+                Double.parseDouble(latitudeEdit.getText().toString()));
+        intent.putExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA,
+                Double.parseDouble(longitudeEdit.getText().toString()));
+    }
+    infoText.setVisibility(View.INVISIBLE);
+    progressBar.setVisibility(View.VISIBLE);
+    Log.e(TAG, &quot;Starting Service&quot;);
+    startService(intent);
+}
+
+class AddressResultReceiver extends ResultReceiver {
+    public AddressResultReceiver(Handler handler) {
+        super(handler);
+    }
+
+    @Override
+    protected void onReceiveResult(int resultCode, final Bundle resultData) {
+        if (resultCode == Constants.SUCCESS_RESULT) {
+            final Address address = resultData.getParcelable(Constants.RESULT_ADDRESS);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressBar.setVisibility(View.GONE);
+                    infoText.setVisibility(View.VISIBLE);
+                    infoText.setText(&quot;Latitude: &quot; + address.getLatitude() + &quot;\n&quot; +
+                            &quot;Longitude: &quot; + address.getLongitude() + &quot;\n&quot; +
+                            &quot;Address: &quot; + resultData.getString(Constants.RESULT_DATA_KEY));
+                    goToNaviActivity(MainActivity.this,&quot;&quot;,address.getLatitude(),address.getLongitude(),&quot;1&quot;,&quot;0&quot;);
+
+                }
+            });
+        } else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressBar.setVisibility(View.GONE);
+                    infoText.setVisibility(View.VISIBLE);
+                    infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY));
+                }
+            });
+        }
+    }
+}
+
+/**
+ * 启动高德App进行导航
+ * @param poiname 非必填 POI 名称
+ * @param lat 必填 纬度
+ * @param lon 必填 经度
+ * @param dev 必填 是否偏移(0:lat 和 lon 是已经加密后的,不需要国测加密; 1:需要国测加密)
+ * @param style 必填 导航方式(0 速度快; 1 费用少; 2 路程短; 3 不走高速；4 躲避拥堵；5 不走高速且避免收费；6 不走高速且躲避拥堵；7 躲避收费和拥堵；8 不走高速躲避收费和拥堵))
+ */
+public  void goToNaviActivity(Context context, String poiname , Double lat , Double lon , String dev , String style){
+    StringBuffer stringBuffer  = new StringBuffer(&quot;androidamap://navi?sourceApplication=&quot;)
+            .append(&quot;&quot;);
+    if (!TextUtils.isEmpty(poiname)){
+        stringBuffer.append(&quot;&amp;poiname=&quot;).append(poiname);
+    }
+    stringBuffer
+            .append(&quot;&amp;lat=&quot;).append(lat)
+            .append(&quot;&amp;lon=&quot;).append(lon)
+            .append(&quot;&amp;destination=&quot;).append(context)
+            .append(&quot;&amp;dev=&quot;).append(dev)
+            .append(&quot;&amp;style=&quot;).append(style);
+
+    Intent intent = new Intent(&quot;android.intent.action.VIEW&quot;, android.net.Uri.parse(stringBuffer.toString()));
+    intent.setPackage(&quot;com.autonavi.minimap&quot;);
+    startActivity(intent);
+}
+}</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android 支付宝]]></title>
+        <id>https://yugoal.github.io/post/android-zhi-fu-bao/</id>
+        <link href="https://yugoal.github.io/post/android-zhi-fu-bao/">
+        </link>
+        <updated>2020-04-13T02:06:06.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="1接入支付宝">1.接入支付宝</h2>
+<h3 id="接入前准备">接入前准备</h3>
+<ul>
+<li>商户需要进行审核签约</li>
+<li>密钥管理（生成公私钥）</li>
+</ul>
+<h3 id="正式接入">正式接入</h3>
+<p><strong>服务端</strong><br>
+私钥必须放在服务端，签名过程必须放在服务端。</p>
+<p><strong>客户端（Android）</strong></p>
+<ol>
+<li>根据用户选择商品请求服务端获取订单和签名，</li>
+<li>根据服务端返回订单和签名调起支付宝App支付，并对支付返回结果做处理。</li>
+</ol>
+<h2 id="2android-集成并调用支付宝">2.Android 集成并调用支付宝</h2>
+<ul>
+<li>. 添加jar包</li>
+<li>. gradle中添加依赖</li>
+</ul>
+<hr>
+<pre><code>	PayTask payTask = new PayTask(AboutUsActivity.this);
+	Map&lt;String, String&gt; result = payTask.payV2(orderInfo, true);
+</code></pre>
+<blockquote>
+<pre><code>orderInfo ：服务端返回的订单信息。
+</code></pre>
+</blockquote>
+<h2 id="3返回结果处理全部代码">3.返回结果处理（全部代码）</h2>
+<pre><code>/**
+ * 支付宝
+ * @param strURL
+ */
+private void aliPay(String strURL) {
+    Observable.create(new ObservableOnSubscribe&lt;Object&gt;() {
+        @Override
+        public void subscribe(@NonNull ObservableEmitter&lt;Object&gt; e) throws Exception {
+            String orderInfo = OkClient.get(strURL, new JSONObject());//获取订单信息
+            orderInfo = orderInfo.replace(&quot;amp;&quot;, &quot;&quot;);//后台PHP，返回的所有&amp;参数都变成&amp;amp，所有需要替换。
+            PayTask payTask = new PayTask(AboutUsActivity.this);
+            Map&lt;String, String&gt; result = payTask.payV2(orderInfo, true);
+            e.onNext(result);
+        }
+    }).compose(RxUtil.activityLifecycle(this))
+            .compose(RxUtil.io())
+            .subscribe(new Consumer&lt;Object&gt;() {
+                @Override
+                public void accept(@NonNull Object o) throws Exception {
+                    closeProgressDialog();
+                    PayResult payResult = new PayResult((Map&lt;String, String&gt;) o);
+                    /**
+                     对于支付结果，请商户依赖服务端的异步通知结果。同步通知结果，仅作为支付结束的通知。
+                     */
+                    String resultInfo = payResult.getResult();// 同步返回需要验证的信息
+                    String resultStatus = payResult.getResultStatus();
+                    // 判断resultStatus 为9000则代表支付成功
+                    if (TextUtils.equals(resultStatus, AliPay.PAY_OK)) {//---------&gt;支付成功
+                        finish();
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_FAIL)) {//---------&gt;支付失败
+                        // 该笔订单真实的支付结果，需要依赖服务端的异步通知。
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_CANCEL)) {//---------&gt;交易取消
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_NET_ERROR)) {//----------&gt;网络出现错误
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_REPEAT)) {//------&gt;交易重复
+                    }
+                }
+            });
+}
+</code></pre>
+<h2 id="4回调类">4.回调类</h2>
+<pre><code>/**
+* 支付宝回调code值
+*/
+
+public class AliPay {
+
+	public static final String PAY_OK = &quot;9000&quot;;//支付宝支付成功
+	public static final String PAY_PROCESSING_UNKNOWN = &quot;8000&quot;;//正在处理中，支付结果未知（有可能已经支付成功），请查询商户订单列表中订单的支付状态
+	public static final String PAY_FAIL = &quot;4000&quot;;//支付宝支付失败
+	public static final String PAY_REPEAT = &quot;5000&quot;;//支付宝支付重复请求
+	public static final String PAY_CANCEL = &quot;6001&quot;;//用户中途取消
+	public static final String PAY_NET_ERROR = &quot;6002&quot;;//网络连接出错
+	public static final String PAY_UNKNOWN = &quot;6004&quot;;//支付结果未知（有可能已经支付成功），请查询商户订单列表中订单的支付状态
+}
+
+
+/**
+* 支付宝回调
+*/
+
+public class PayResult {
+	private String resultStatus;
+	private String result;
+	private String memo;
+
+	public PayResult(Map&lt;String, String&gt; rawResult) {
+	    if (rawResult == null) {
+	        return;
+	    }
+
+	    for (String key : rawResult.keySet()) {
+	        if (TextUtils.equals(key, &quot;resultStatus&quot;)) {
+	            resultStatus = rawResult.get(key);
+	        } else if (TextUtils.equals(key, &quot;result&quot;)) {
+	            result = rawResult.get(key);
+	        } else if (TextUtils.equals(key, &quot;memo&quot;)) {
+	            memo = rawResult.get(key);
+	        }
+	    }
+	}
+
+	@Override
+	public String toString() {
+	    return &quot;resultStatus={&quot; + resultStatus + &quot;};memo={&quot; + memo
+            + &quot;};result={&quot; + result + &quot;}&quot;;
+	}
+
+	/**
+	 * @return the resultStatus
+	 */
+	public String getResultStatus() {
+	    return resultStatus;
+	}
+
+	/**
+	 * @return the memo
+	 */
+	public String getMemo() {
+	    return memo;
+	}
+
+	/**
+	 * @return the result
+	 */
+	public String getResult() {
+	    return result;
+	}
+}
+</code></pre>
+<p><a href="https://yugoal.github.io/">个人博客地址</a></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android微信支付]]></title>
+        <id>https://yugoal.github.io/post/android-wei-xin-zhi-fu/</id>
+        <link href="https://yugoal.github.io/post/android-wei-xin-zhi-fu/">
+        </link>
+        <updated>2020-04-13T02:05:29.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="前言">前言</h2>
+<p>最近公司App需要做微信支付这一块，然后就是被微信支付各种虐。所以觉得有必要把这痛苦的经历记录下来。</p>
+<h4 id="一发送商品订单给服务器然后从服务器获取支付请求参数">一.发送商品订单给服务器，然后从服务器获取支付请求参数</h4>
+<p><em>1.首先注册，其中api为IWXAPI的实例。</em></p>
+<pre><code>api=WXAPIFactory.createWXAPI(context,APP_ID,false);
+api.registerApp(APP_ID);
+</code></pre>
+<p><em>2.从服务端拿到必要参数后，调支付即可，其中params是自定义的用来保存从服务端获取的发起支付请求所需要的参数对象。</em></p>
+<pre><code>if(api!=null){
+if(isWXAppInstalled()){
+PayReqreq=newPayReq();
+req.appId=APP_ID;
+req.partnerId=params.getPartnerId();
+req.prepayId=params.getPrepayId();
+req.packageValue=params.getPackageValue();
+req.nonceStr=params.getNonceStr();
+req.timeStamp=params.getTimeStamp();
+req.sign=params.getSign();
+
+api.sendReq(req);
+}
+}
+</code></pre>
+<p><em>3.WXPayEntryActivity支付回调界面</em></p>
+<pre><code>public class WXPayEntryActivity extends Activity implements IWXAPIEventHandler {
+	private static final String TAG = &quot;WXPayEntryActivity&quot;;
+
+	private IWXAPI api;
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.pay_result);
+		api = WXAPIFactory.createWXAPI(this, Constants.APP_ID);
+		api.handleIntent(getIntent(), this);
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		setIntent(intent);
+		api.handleIntent(intent, this);
+	}
+
+	@Override
+	public void onReq(BaseReq req) {
+	}
+
+	@Override
+	public void onResp(BaseResp resp) {
+		Log.d(TAG, &quot;onPayFinish, errCode = &quot; + resp.errCode);
+
+		if (resp.getType() == ConstantsAPI.COMMAND_PAY_BY_WX) {
+			if(resp.errCode == 0){
+				MyToast.showToast(this,&quot;支付成功&quot;);
+			}else if(resp.errCode == -2){
+				MyToast.showToast(this,&quot;支付取消&quot;);
+			}
+			finish();
+		}
+	}
+}
+</code></pre>
+<p>####二.App获取预支付订单，然后发送请求<br>
+<em>1.预支付请求数据</em></p>
+<pre><code>/**
+     * 预支付请求数据
+     *
+     * @return
+     */
+    private String genProductArgs() {
+        StringBuffer xml = new StringBuffer();
+
+        try {
+            String nonceStr = genNonceStr();
+            xml.append(&quot;&lt;/xml&gt;&quot;);
+            List&lt;NameValuePair&gt; packageParams = new LinkedList&lt;NameValuePair&gt;();
+            packageParams.add(new BasicNameValuePair(&quot;appid&quot;, Constants.APP_ID));
+            packageParams.add(new BasicNameValuePair(&quot;body&quot;, xiaoqu_name+&quot;--&quot;+pay_name));
+            packageParams.add(new BasicNameValuePair(&quot;mch_id&quot;, Constants.MCH_ID));
+            packageParams.add(new BasicNameValuePair(&quot;nonce_str&quot;, nonceStr));
+            packageParams.add(new BasicNameValuePair(&quot;notify_url&quot;, &quot;http://weixin.qq.com&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;out_trade_no&quot;, genOutTradNo()));
+            packageParams.add(new BasicNameValuePair(&quot;spbill_create_ip&quot;, &quot;127.0.0.1&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;total_fee&quot;, pay_num));
+            packageParams.add(new BasicNameValuePair(&quot;trade_type&quot;, &quot;APP&quot;));
+
+            String sign = genPackageSign(packageParams);
+            packageParams.add(new BasicNameValuePair(&quot;sign&quot;, sign));
+
+            String xmlstring = toXml(packageParams);
+            return new String(xmlstring.toString().getBytes(), &quot;ISO8859-1&quot;);
+
+        } catch (Exception e) {
+            Log.e(TAG, &quot;genProductArgs fail, ex = &quot; + e.getMessage());
+            return null;
+        }
+    }
+</code></pre>
+<p><em>2.获取预支付订单</em></p>
+<pre><code>/**
+     * 异步获取预支付订单 prepay_id
+     */
+    private class GetPrepayIdTask extends AsyncTask&lt;Void, Void, Map&lt;String, String&gt;&gt; {
+
+        private ProgressDialog dialog;
+
+
+        @Override
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(PayOrderActivity.this, &quot;&quot;, getString(R.string.getting_prepayid));
+        }
+
+        @Override
+        protected void onPostExecute(Map&lt;String, String&gt; result) {
+            if (dialog != null) {
+                dialog.dismiss();
+            }
+            sb.append(&quot;prepay_id\n&quot; + result.get(&quot;prepay_id&quot;) + &quot;\n\n&quot;);
+            resultunifiedorder = result;
+        
+            //获取支付请求数据，发起支付请求
+            genPayReq();
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+        }
+
+        @Override
+        protected Map&lt;String, String&gt; doInBackground(Void... params) {
+
+            //获取预支付订单
+            String url = String.format(&quot;https://api.mch.weixin.qq.com/pay/unifiedorder&quot;);
+            String entity = genProductArgs();
+
+            Log.e(&quot;entity&quot;, entity);
+
+            byte[] buf = Util.httpPost(url, entity);
+
+            String content = new String(buf);
+            Log.e(&quot;content&quot;, content);
+            Map&lt;String, String&gt; xml = decodeXml(content);
+
+            return xml;
+        }
+    }
+</code></pre>
+<p><em>3.全部代码</em></p>
+<pre><code>public class PayOrderActivity extends BaseActivity {
+    private static final String TAG = &quot;PayOrderActivity&quot;;
+
+    @Bind(R.id.button)
+    Button button;
+
+    PayReq req;
+    final IWXAPI msgApi = WXAPIFactory.createWXAPI(this, null);
+    //	TextView show;
+    Map&lt;String, String&gt; resultunifiedorder;
+    StringBuffer sb;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_pay_order);
+        ButterKnife.bind(this);
+       
+        req = new PayReq();
+        sb = new StringBuffer();
+
+        msgApi.registerApp(Constants.APP_ID);
+
+
+    }
+
+    @OnClick({R.id.button})
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.button:
+                if(pay_id == null||pay_id.length()==0){
+                    MyToast.showToast(PayOrderActivity.this,&quot;请选择缴费类型&quot;);
+                }else {
+                    GetPrepayIdTask getPrepayId = new GetPrepayIdTask();
+                    getPrepayId.execute();
+                }
+                break;
+        }
+    }
+
+    /**
+     * 异步获取预支付订单 prepay_id
+     */
+    private class GetPrepayIdTask extends AsyncTask&lt;Void, Void, Map&lt;String, String&gt;&gt; {
+
+        private ProgressDialog dialog;
+
+
+        @Override
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(PayOrderActivity.this, &quot;&quot;, getString(R.string.getting_prepayid));
+        }
+
+        @Override
+        protected void onPostExecute(Map&lt;String, String&gt; result) {
+            if (dialog != null) {
+                dialog.dismiss();
+            }
+            sb.append(&quot;prepay_id\n&quot; + result.get(&quot;prepay_id&quot;) + &quot;\n\n&quot;);
+//			show.setText(sb.toString());
+
+            resultunifiedorder = result;
+            genPayReq();
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+        }
+
+        @Override
+        protected Map&lt;String, String&gt; doInBackground(Void... params) {
+
+            //获取预支付订单
+            String url = String.format(&quot;https://api.mch.weixin.qq.com/pay/unifiedorder&quot;);
+            String entity = genProductArgs();
+
+            Log.e(&quot;entity&quot;, entity);
+
+            byte[] buf = Util.httpPost(url, entity);
+
+            String content = new String(buf);
+            Log.e(&quot;content&quot;, content);
+            Map&lt;String, String&gt; xml = decodeXml(content);
+
+            return xml;
+        }
+    }
+
+
+    /**
+     * 获取支付请求数据，发起支付请求
+     */
+    private void genPayReq() {
+        req.appId = Constants.APP_ID;
+        req.partnerId = Constants.MCH_ID;
+        req.prepayId = resultunifiedorder.get(&quot;prepay_id&quot;);
+        req.packageValue = &quot;Sign=WXPay&quot;;
+        req.nonceStr = genNonceStr();
+        req.timeStamp = String.valueOf(genTimeStamp());
+
+
+        List&lt;NameValuePair&gt; signParams = new LinkedList&lt;NameValuePair&gt;();
+        signParams.add(new BasicNameValuePair(&quot;appid&quot;, req.appId));
+        signParams.add(new BasicNameValuePair(&quot;noncestr&quot;, req.nonceStr));
+        signParams.add(new BasicNameValuePair(&quot;package&quot;, req.packageValue));
+        signParams.add(new BasicNameValuePair(&quot;partnerid&quot;, req.partnerId));
+        signParams.add(new BasicNameValuePair(&quot;prepayid&quot;, req.prepayId));
+        signParams.add(new BasicNameValuePair(&quot;timestamp&quot;, req.timeStamp));
+
+        req.sign = genAppSign(signParams);
+
+        sb.append(&quot;sign\n&quot; + req.sign + &quot;\n\n&quot;);
+        //SPUtil.put(this, &quot;uid&quot;, req.prepayId);
+//		show.setText(sb.toString());
+        sendPayReq();
+        Log.e(&quot;PayReq&quot;, signParams.toString());
+    }
+
+    /**
+     * 支付请求签名
+     *
+     * @param params
+     * @return
+     */
+    private String genAppSign(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(params.get(i).getName());
+            sb.append('=');
+            sb.append(params.get(i).getValue());
+            sb.append('&amp;');
+        }
+        sb.append(&quot;key=&quot;);
+        sb.append(Constants.API_KEY);
+
+        this.sb.append(&quot;sign str\n&quot; + sb.toString() + &quot;\n\n&quot;);
+        String appSign = MD5.getMessageDigest(sb.toString().getBytes()).toUpperCase();
+        Log.e(&quot;orion&quot;, appSign);
+        return appSign;
+    }
+
+    /**
+     * 预支付请求数据
+     *
+     * @return
+     */
+    private String genProductArgs() {
+        StringBuffer xml = new StringBuffer();
+
+        try {
+            String nonceStr = genNonceStr();
+
+
+            xml.append(&quot;&lt;/xml&gt;&quot;);
+            List&lt;NameValuePair&gt; packageParams = new LinkedList&lt;NameValuePair&gt;();
+            packageParams.add(new BasicNameValuePair(&quot;appid&quot;, Constants.APP_ID));
+            packageParams.add(new BasicNameValuePair(&quot;body&quot;, &quot;测试商品&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;mch_id&quot;, Constants.MCH_ID));
+            packageParams.add(new BasicNameValuePair(&quot;nonce_str&quot;, nonceStr));
+            packageParams.add(new BasicNameValuePair(&quot;notify_url&quot;, &quot;http://weixin.qq.com&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;out_trade_no&quot;, genOutTradNo()));
+            packageParams.add(new BasicNameValuePair(&quot;spbill_create_ip&quot;, &quot;127.0.0.1&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;total_fee&quot;, pay_num));
+            packageParams.add(new BasicNameValuePair(&quot;trade_type&quot;, &quot;APP&quot;));
+
+
+            String sign = genPackageSign(packageParams);
+            packageParams.add(new BasicNameValuePair(&quot;sign&quot;, sign));
+
+
+            String xmlstring = toXml(packageParams);
+            return new String(xmlstring.toString().getBytes(), &quot;ISO8859-1&quot;);
+
+        } catch (Exception e) {
+            Log.e(TAG, &quot;genProductArgs fail, ex = &quot; + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 随机字符串
+     *
+     * @return
+     */
+    private String genNonceStr() {
+        Random random = new Random();
+        return MD5.getMessageDigest(String.valueOf(random.nextInt(10000)).getBytes());
+    }
+
+    /**
+     * 订单时间
+     *
+     * @return
+     */
+    private long genTimeStamp() {
+        return System.currentTimeMillis() / 1000;
+    }
+
+
+    /**
+     * 随机产生商户订单号
+     *
+     * @return
+     */
+    private String genOutTradNo() {
+        Random random = new Random();
+        u_id = MD5.getMessageDigest(String.valueOf(random.nextInt(10000)).getBytes());
+        return u_id;
+    }
+
+    /**
+     * 生成签名 获取预支付订单签名
+     */
+    private String genPackageSign(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(params.get(i).getName());
+            sb.append('=');
+            sb.append(params.get(i).getValue());
+            sb.append('&amp;');
+        }
+        sb.append(&quot;key=&quot;);
+        sb.append(Constants.API_KEY);
+
+
+        String packageSign = MD5.getMessageDigest(sb.toString().getBytes()).toUpperCase();
+        Log.e(&quot;orion&quot;, packageSign);
+        return packageSign;
+    }
+
+    /**
+     * 参数转xml
+     *
+     * @param params
+     * @return
+     */
+    private String toXml(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(&quot;&lt;xml&gt;&quot;);
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(&quot;&lt;&quot; + params.get(i).getName() + &quot;&gt;&quot;);
+
+
+            sb.append(params.get(i).getValue());
+            sb.append(&quot;&lt;/&quot; + params.get(i).getName() + &quot;&gt;&quot;);
+        }
+        sb.append(&quot;&lt;/xml&gt;&quot;);
+
+        Log.e(&quot;orion&quot;, sb.toString());
+        return sb.toString();
+    }
+
+    /**
+     * xml 转Map
+     *
+     * @param content
+     * @return
+     */
+    public Map&lt;String, String&gt; decodeXml(String content) {
+
+        try {
+            Map&lt;String, String&gt; xml = new HashMap&lt;String, String&gt;();
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(new StringReader(content));
+            int event = parser.getEventType();
+            while (event != XmlPullParser.END_DOCUMENT) {
+
+                String nodeName = parser.getName();
+                switch (event) {
+                    case XmlPullParser.START_DOCUMENT:
+
+                        break;
+                    case XmlPullParser.START_TAG:
+
+                        if (&quot;xml&quot;.equals(nodeName) == false) {
+                            //实例化student对象
+                            xml.put(nodeName, parser.nextText());
+                        }
+                        break;
+                    case XmlPullParser.END_TAG:
+                        break;
+                }
+                event = parser.next();
+            }
+
+            return xml;
+        } catch (Exception e) {
+            Log.e(&quot;orion&quot;, e.toString());
+        }
+        return null;
+
+    }
+
+    /**
+     * 发起支付请求
+     */
+    private void sendPayReq() {
+        msgApi.registerApp(Constants.APP_ID);
+        msgApi.sendReq(req);
+    }
+}
+</code></pre>
+<h2 id="接下来就是踩坑">接下来就是踩坑</h2>
+<blockquote>
+<p>1.微信支付官方demo提供的接口，每个微信账号只能调用一次，再次调用时支付返回code值为-1（貌似是因为签名的原因）</p>
+</blockquote>
+<hr>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android生命周期组件Lifecycle遇上高德地图]]></title>
+        <id>https://yugoal.github.io/post/android-sheng-ming-zhou-qi-zu-jian-lifecycle-yu-shang-gao-de-di-tu/</id>
+        <link href="https://yugoal.github.io/post/android-sheng-ming-zhou-qi-zu-jian-lifecycle-yu-shang-gao-de-di-tu/">
+        </link>
+        <updated>2020-04-13T02:04:52.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="前言">前言</h1>
+<p>最近在学习jetpack，正好项目中的地图方面的功能需要优化，所以正好使用Lifecycle优化下代码。</p>
+<h1 id="lifecycle-的作用">Lifecycle 的作用</h1>
+<p>Lifecycle 是具有生命周期感知能力的组件，这样可以解决activity和fragment中的生命周期问题。</p>
+<h1 id="lifecycle-的基本使用">Lifecycle 的基本使用</h1>
+<h3 id="一-导入依赖库">一、导入依赖库</h3>
+<pre><code>implementation &quot;androidx.lifecycle:lifecycle-runtime:2.1.0&quot;
+</code></pre>
+<h3 id="二-activity-继承appcompatactivity或自己实现lifecycleowner接口">二、 activity 继承AppCompatActivity或自己实现LifecycleOwner接口</h3>
+<p>因为项目中BaseActivity是继承的AppCompatActivity，所以这里就不实现LifecycleOwner接口了。</p>
+<h3 id="三-创建地图定位监听类amaplocationlistener">三、创建地图定位监听类AMapLocationListener</h3>
+<ol>
+<li>实现LifecycleObserver</li>
+</ol>
+<pre><code>public class AMapLocationListener implements LifecycleObserver {
+    
+}
+</code></pre>
+<ol start="2">
+<li>使<code>@OnLifecycleEvent</code>注解来表明功能所在的生命周期<code>Lifecycle.Event.ON_CREATE</code>对应<code>onCreate</code></li>
+</ol>
+<pre><code> @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    void createLocation(){
+        initLocation();
+        startLocation();
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    void destroyLocal(){
+        destroyLocation();
+    }
+</code></pre>
+<ol start="3">
+<li>最后在Activity中使用</li>
+</ol>
+<pre><code>    //添加定位监听
+   AMapLocationListener aMapLocationListener = new AMapLocationListener();
+   getLifecycle().addObserver(aMapLocationListener);
+</code></pre>
+<h2 id="下面放上完整代码">下面放上完整代码</h2>
+<p><code>AMapLocationListener</code></p>
+<pre><code>public class AMapLocationListener implements LifecycleObserver {
+    private AMapLocationClient locationClient;
+    //声明mLocationOption对象
+    private AMapLocationClientOption locationOption = null;
+
+    private LatLng myLatlng;
+
+
+    public LatLng getMyLatlng() {
+        return myLatlng;
+    }
+
+    private void setMyLatlng(LatLng myLatlng) {
+        this.myLatlng = myLatlng;
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    void createLocation(){
+        initLocation();
+        startLocation();
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    void destroyLocal(){
+        destroyLocation();
+    }
+
+    private void initLocation() {
+        //初始化client
+        locationClient = new AMapLocationClient(FPVDemoApplication.getContext());
+        locationOption = getDefaultOption();
+        //设置定位参数
+        locationClient.setLocationOption(locationOption);
+        // 设置定位监听
+        locationClient.setLocationListener(locationListener);
+    }
+
+    /**
+     * 默认的定位参数
+     */
+    private AMapLocationClientOption getDefaultOption() {
+        AMapLocationClientOption mOption = new AMapLocationClientOption();
+        mOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);//可选，设置定位模式，可选的模式有高精度、仅设备、仅网络。默认为高精度模式
+        mOption.setGpsFirst(true);//可选，设置是否gps优先，只在高精度模式下有效。默认关闭
+        mOption.setHttpTimeOut(30000);//可选，设置网络请求超时时间。默认为30秒。在仅设备模式下无效
+        mOption.setInterval(5 * 1000);//可选，设置定位间隔。默认为2秒
+        mOption.setNeedAddress(true);//可选，设置是否返回逆地理地址信息。默认是true
+        mOption.setOnceLocation(false);//可选，设置是否单次定位。默认是false
+        mOption.setOnceLocationLatest(false);//可选，设置是否等待wifi刷新，默认为false.如果设置为true,会自动变为单次定位，持续定位时不要使用
+        AMapLocationClientOption.setLocationProtocol(AMapLocationClientOption.AMapLocationProtocol.HTTP);//可选， 设置网络请求的协议。可选HTTP或者HTTPS。默认为HTTP
+        mOption.setSensorEnable(false);//可选，设置是否使用传感器。默认是false
+        mOption.setWifiScan(true); //可选，设置是否开启wifi扫描。默认为true，如果设置为false会同时停止主动刷新，停止以后完全依赖于系统刷新，定位位置可能存在误差
+        mOption.setLocationCacheEnable(true); //可选，设置是否使用缓存定位，默认为true
+        //mOption.setGeoLanguage(AMapLocationClientOption.GeoLanguage.DEFAULT);//可选，设置逆地理信息的语言，默认值为默认语言（根据所在地区选择语言）
+        return mOption;
+    }
+
+    /**
+     * 定位监听
+     */
+    com.amap.api.location.AMapLocationListener locationListener = new com.amap.api.location.AMapLocationListener() {
+        @Override
+        public void onLocationChanged(AMapLocation location) {
+            if (null != location) {
+
+                StringBuffer sb = new StringBuffer();
+                //errCode等于0代表定位成功，其他的为定位失败，具体的可以参照官网定位错误码说明
+                if (location.getErrorCode() == 0) {
+                    double lat = location.getLatitude();
+                    double lon = location.getLongitude();
+                    myLatlng = new LatLng(lat,lon);
+                    setMyLatlng(myLatlng);
+                } else {
+                    //定位失败
+                    sb.append(&quot;定位失败&quot; + &quot;\n&quot;);
+                    sb.append(&quot;错误码:&quot; + location.getErrorCode() + &quot;\n&quot;);
+                    sb.append(&quot;错误信息:&quot; + location.getErrorInfo() + &quot;\n&quot;);
+                    sb.append(&quot;错误描述:&quot; + location.getLocationDetail() + &quot;\n&quot;);
+                }
+            }
+        }
+    };
+
+    private void startLocation() {
+        // 启动定位
+        locationClient.startLocation();
+    }
+
+    /**
+     * 销毁定位
+     *
+     * @author hongming.wang
+     * @since 2.8.0
+     */
+    private void destroyLocation() {
+        if (null != locationClient) {
+            /**
+             * 如果AMapLocationClient是在当前Activity实例化的，
+             * 在Activity的onDestroy中一定要执行AMapLocationClient的onDestroy
+             */
+            //locationClient.disableBackgroundLocation(true);
+            locationClient.stopLocation();
+            locationClient.unRegisterLocationListener(locationListener);
+            locationClient.onDestroy();
+            locationClient = null;
+            locationOption = null;
+        }
+    }
+
+    /**
+     * 回到自己的定位
+     */
+    public void moveTolocation(AMap aMap) {
+        if (aMap != null &amp;&amp; myLatlng != null) {
+            //将地图移动到定位点
+            aMap.moveCamera(CameraUpdateFactory.changeLatLng(myLatlng));
+        }
+    }
+
+}
+</code></pre>
+<p><code>Activity</code>中使用</p>
+<pre><code>    //添加定位监听
+    AMapLocationListener aMapLocationListener = new AMapLocationListener();
+    getLifecycle().addObserver(aMapLocationListener);
+    btnLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                    aMapLocationListener.moveTolocation(amap);    
+                    }
+                });
+</code></pre>
+<h2 id="后续准备继续优化加上放大缩小或地图模式切换等功能">后续准备继续优化，加上放大缩小或地图模式切换等功能</h2>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Android仿滴答清单 自定义布局适配软键盘高度]]></title>
         <id>https://yugoal.github.io/post/android-fang-di-da-qing-dan-zi-ding-yi-bu-ju-gua-pei-ruan-jian-pan-gao-du/</id>

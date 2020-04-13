@@ -1,0 +1,376 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android 原生Api进行地面编码与逆地理编码 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android 原生Api进行地面编码与逆地理编码</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h1 id="废话不说直接上代码">废话不说，直接上代码</h1>
+<h2 id="异步执行编码转换">异步执行编码转换</h2>
+<pre><code>public class GeocodeAddressIntentService extends IntentService {
+
+protected ResultReceiver resultReceiver;
+private static final String TAG = &quot;GEO_ADDY_SERVICE&quot;;
+
+public GeocodeAddressIntentService() {
+    super(&quot;GeocodeAddressIntentService&quot;);
+}
+
+@Override
+protected void onHandleIntent(Intent intent) {
+    Log.e(TAG, &quot;onHandleIntent&quot;);
+    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+    String errorMessage = &quot;&quot;;
+    List&lt;Address&gt; addresses = null;
+
+    int fetchType = intent.getIntExtra(Constants.FETCH_TYPE_EXTRA, 0);
+    Log.e(TAG, &quot;fetchType == &quot; + fetchType);
+
+    if(fetchType == Constants.USE_ADDRESS_NAME) {
+        String name = intent.getStringExtra(Constants.LOCATION_NAME_DATA_EXTRA);
+        try {
+            addresses = geocoder.getFromLocationName(name, 1);
+        } catch (IOException e) {
+            errorMessage = &quot;Service not available&quot;;
+            Log.e(TAG, errorMessage, e);
+        }
+    }
+    else if(fetchType == Constants.USE_ADDRESS_LOCATION) {
+        double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
+        double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
+
+        try {
+            addresses = geocoder.getFromLocation(latitude, longitude, 1);
+        } catch (IOException ioException) {
+            errorMessage = &quot;Service Not Available&quot;;
+            Log.e(TAG, errorMessage, ioException);
+        } catch (IllegalArgumentException illegalArgumentException) {
+            errorMessage = &quot;Invalid Latitude or Longitude Used&quot;;
+            Log.e(TAG, errorMessage + &quot;. &quot; +
+                    &quot;Latitude = &quot; + latitude + &quot;, Longitude = &quot; +
+                    longitude, illegalArgumentException);
+        }
+    }
+    else {
+        errorMessage = &quot;Unknown Type&quot;;
+        Log.e(TAG, errorMessage);
+    }
+
+    resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
+    if (addresses == null || addresses.size()  == 0) {
+        if (errorMessage.isEmpty()) {
+            errorMessage = &quot;Not Found&quot;;
+            Log.e(TAG, errorMessage);
+        }
+        deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
+    } else {
+        for(Address address : addresses) {
+            String outputAddress = &quot;&quot;;
+            for(int i = 0; i &lt; address.getMaxAddressLineIndex(); i++) {
+                outputAddress += &quot; --- &quot; + address.getAddressLine(i);
+            }
+            Log.e(TAG, outputAddress);
+        }
+        Address address = addresses.get(0);
+        ArrayList&lt;String&gt; addressFragments = new ArrayList&lt;&gt;();
+
+        for(int i = 0; i &lt; address.getMaxAddressLineIndex(); i++) {
+            addressFragments.add(address.getAddressLine(i));
+        }
+        Log.i(TAG, &quot;Address Found&quot;);
+        deliverResultToReceiver(Constants.SUCCESS_RESULT,
+                TextUtils.join(System.getProperty(&quot;line.separator&quot;),
+                        addressFragments), address);
+    }
+}
+
+private void deliverResultToReceiver(int resultCode, String message, Address address) {
+    Bundle bundle = new Bundle();
+    bundle.putParcelable(Constants.RESULT_ADDRESS, address);
+    bundle.putString(Constants.RESULT_DATA_KEY, message);
+    resultReceiver.send(resultCode, bundle);
+}
+
+}	
+</code></pre>
+<h2 id="使用">使用</h2>
+<pre><code>public class MainActivity extends AppCompatActivity {
+
+AddressResultReceiver mResultReceiver;
+
+EditText latitudeEdit, longitudeEdit, addressEdit;
+ProgressBar progressBar;
+TextView infoText;
+CheckBox checkBox;
+
+boolean fetchAddress;
+int fetchType = Constants.USE_ADDRESS_LOCATION;
+
+private static final String TAG = &quot;MAIN_ACTIVITY&quot;;
+
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+
+    longitudeEdit = (EditText) findViewById(R.id.longitudeEdit);
+    latitudeEdit = (EditText) findViewById(R.id.latitudeEdit);
+    addressEdit = (EditText) findViewById(R.id.addressEdit);
+    progressBar = (ProgressBar) findViewById(R.id.progressBar);
+    infoText = (TextView) findViewById(R.id.infoText);
+    checkBox = (CheckBox) findViewById(R.id.checkbox);
+
+    mResultReceiver = new AddressResultReceiver(null);
+}
+
+public void onRadioButtonClicked(View view) {
+    boolean checked = ((RadioButton) view).isChecked();
+
+    switch (view.getId()) {
+        case R.id.radioAddress:
+            if (checked) {
+                fetchAddress = false;
+                fetchType = Constants.USE_ADDRESS_NAME;
+                longitudeEdit.setEnabled(false);
+                latitudeEdit.setEnabled(false);
+                addressEdit.setEnabled(true);
+                addressEdit.requestFocus();
+            }
+            break;
+        case R.id.radioLocation:
+            if (checked) {
+                fetchAddress = true;
+                fetchType = Constants.USE_ADDRESS_LOCATION;
+                latitudeEdit.setEnabled(true);
+                latitudeEdit.requestFocus();
+                longitudeEdit.setEnabled(true);
+                addressEdit.setEnabled(false);
+            }
+            break;
+    }
+}
+
+public void onButtonClicked(View view) {
+    Intent intent = new Intent(this, GeocodeAddressIntentService.class);
+    intent.putExtra(Constants.RECEIVER, mResultReceiver);
+    intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);
+    if (fetchType == Constants.USE_ADDRESS_NAME) {
+        if (addressEdit.getText().length() == 0) {
+            Toast.makeText(this, &quot;Please enter an address name&quot;, Toast.LENGTH_LONG).show();
+            return;
+        }
+        intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressEdit.getText().toString());
+    } else {
+        if (latitudeEdit.getText().length() == 0 || longitudeEdit.getText().length() == 0) {
+            Toast.makeText(this,
+                    &quot;Please enter both latitude and longitude&quot;,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        intent.putExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA,
+                Double.parseDouble(latitudeEdit.getText().toString()));
+        intent.putExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA,
+                Double.parseDouble(longitudeEdit.getText().toString()));
+    }
+    infoText.setVisibility(View.INVISIBLE);
+    progressBar.setVisibility(View.VISIBLE);
+    Log.e(TAG, &quot;Starting Service&quot;);
+    startService(intent);
+}
+
+class AddressResultReceiver extends ResultReceiver {
+    public AddressResultReceiver(Handler handler) {
+        super(handler);
+    }
+
+    @Override
+    protected void onReceiveResult(int resultCode, final Bundle resultData) {
+        if (resultCode == Constants.SUCCESS_RESULT) {
+            final Address address = resultData.getParcelable(Constants.RESULT_ADDRESS);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressBar.setVisibility(View.GONE);
+                    infoText.setVisibility(View.VISIBLE);
+                    infoText.setText(&quot;Latitude: &quot; + address.getLatitude() + &quot;\n&quot; +
+                            &quot;Longitude: &quot; + address.getLongitude() + &quot;\n&quot; +
+                            &quot;Address: &quot; + resultData.getString(Constants.RESULT_DATA_KEY));
+                    goToNaviActivity(MainActivity.this,&quot;&quot;,address.getLatitude(),address.getLongitude(),&quot;1&quot;,&quot;0&quot;);
+
+                }
+            });
+        } else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressBar.setVisibility(View.GONE);
+                    infoText.setVisibility(View.VISIBLE);
+                    infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY));
+                }
+            });
+        }
+    }
+}
+
+/**
+ * 启动高德App进行导航
+ * @param poiname 非必填 POI 名称
+ * @param lat 必填 纬度
+ * @param lon 必填 经度
+ * @param dev 必填 是否偏移(0:lat 和 lon 是已经加密后的,不需要国测加密; 1:需要国测加密)
+ * @param style 必填 导航方式(0 速度快; 1 费用少; 2 路程短; 3 不走高速；4 躲避拥堵；5 不走高速且避免收费；6 不走高速且躲避拥堵；7 躲避收费和拥堵；8 不走高速躲避收费和拥堵))
+ */
+public  void goToNaviActivity(Context context, String poiname , Double lat , Double lon , String dev , String style){
+    StringBuffer stringBuffer  = new StringBuffer(&quot;androidamap://navi?sourceApplication=&quot;)
+            .append(&quot;&quot;);
+    if (!TextUtils.isEmpty(poiname)){
+        stringBuffer.append(&quot;&amp;poiname=&quot;).append(poiname);
+    }
+    stringBuffer
+            .append(&quot;&amp;lat=&quot;).append(lat)
+            .append(&quot;&amp;lon=&quot;).append(lon)
+            .append(&quot;&amp;destination=&quot;).append(context)
+            .append(&quot;&amp;dev=&quot;).append(dev)
+            .append(&quot;&amp;style=&quot;).append(style);
+
+    Intent intent = new Intent(&quot;android.intent.action.VIEW&quot;, android.net.Uri.parse(stringBuffer.toString()));
+    intent.setPackage(&quot;com.autonavi.minimap&quot;);
+    startActivity(intent);
+}
+}</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-zhi-fu-bao/">
+              <h3 class="post-title">
+                下一篇：Android 支付宝
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

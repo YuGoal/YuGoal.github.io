@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android 支付宝 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android 支付宝</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h2 id="1接入支付宝">1.接入支付宝</h2>
+<h3 id="接入前准备">接入前准备</h3>
+<ul>
+<li>商户需要进行审核签约</li>
+<li>密钥管理（生成公私钥）</li>
+</ul>
+<h3 id="正式接入">正式接入</h3>
+<p><strong>服务端</strong><br>
+私钥必须放在服务端，签名过程必须放在服务端。</p>
+<p><strong>客户端（Android）</strong></p>
+<ol>
+<li>根据用户选择商品请求服务端获取订单和签名，</li>
+<li>根据服务端返回订单和签名调起支付宝App支付，并对支付返回结果做处理。</li>
+</ol>
+<h2 id="2android-集成并调用支付宝">2.Android 集成并调用支付宝</h2>
+<ul>
+<li>. 添加jar包</li>
+<li>. gradle中添加依赖</li>
+</ul>
+<hr>
+<pre><code>	PayTask payTask = new PayTask(AboutUsActivity.this);
+	Map&lt;String, String&gt; result = payTask.payV2(orderInfo, true);
+</code></pre>
+<blockquote>
+<pre><code>orderInfo ：服务端返回的订单信息。
+</code></pre>
+</blockquote>
+<h2 id="3返回结果处理全部代码">3.返回结果处理（全部代码）</h2>
+<pre><code>/**
+ * 支付宝
+ * @param strURL
+ */
+private void aliPay(String strURL) {
+    Observable.create(new ObservableOnSubscribe&lt;Object&gt;() {
+        @Override
+        public void subscribe(@NonNull ObservableEmitter&lt;Object&gt; e) throws Exception {
+            String orderInfo = OkClient.get(strURL, new JSONObject());//获取订单信息
+            orderInfo = orderInfo.replace(&quot;amp;&quot;, &quot;&quot;);//后台PHP，返回的所有&amp;参数都变成&amp;amp，所有需要替换。
+            PayTask payTask = new PayTask(AboutUsActivity.this);
+            Map&lt;String, String&gt; result = payTask.payV2(orderInfo, true);
+            e.onNext(result);
+        }
+    }).compose(RxUtil.activityLifecycle(this))
+            .compose(RxUtil.io())
+            .subscribe(new Consumer&lt;Object&gt;() {
+                @Override
+                public void accept(@NonNull Object o) throws Exception {
+                    closeProgressDialog();
+                    PayResult payResult = new PayResult((Map&lt;String, String&gt;) o);
+                    /**
+                     对于支付结果，请商户依赖服务端的异步通知结果。同步通知结果，仅作为支付结束的通知。
+                     */
+                    String resultInfo = payResult.getResult();// 同步返回需要验证的信息
+                    String resultStatus = payResult.getResultStatus();
+                    // 判断resultStatus 为9000则代表支付成功
+                    if (TextUtils.equals(resultStatus, AliPay.PAY_OK)) {//---------&gt;支付成功
+                        finish();
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_FAIL)) {//---------&gt;支付失败
+                        // 该笔订单真实的支付结果，需要依赖服务端的异步通知。
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_CANCEL)) {//---------&gt;交易取消
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_NET_ERROR)) {//----------&gt;网络出现错误
+                        ToastUtils.showToast(payResult.getMemo());
+                    } else if (TextUtils.equals(resultStatus, AliPay.PAY_REPEAT)) {//------&gt;交易重复
+                    }
+                }
+            });
+}
+</code></pre>
+<h2 id="4回调类">4.回调类</h2>
+<pre><code>/**
+* 支付宝回调code值
+*/
+
+public class AliPay {
+
+	public static final String PAY_OK = &quot;9000&quot;;//支付宝支付成功
+	public static final String PAY_PROCESSING_UNKNOWN = &quot;8000&quot;;//正在处理中，支付结果未知（有可能已经支付成功），请查询商户订单列表中订单的支付状态
+	public static final String PAY_FAIL = &quot;4000&quot;;//支付宝支付失败
+	public static final String PAY_REPEAT = &quot;5000&quot;;//支付宝支付重复请求
+	public static final String PAY_CANCEL = &quot;6001&quot;;//用户中途取消
+	public static final String PAY_NET_ERROR = &quot;6002&quot;;//网络连接出错
+	public static final String PAY_UNKNOWN = &quot;6004&quot;;//支付结果未知（有可能已经支付成功），请查询商户订单列表中订单的支付状态
+}
+
+
+/**
+* 支付宝回调
+*/
+
+public class PayResult {
+	private String resultStatus;
+	private String result;
+	private String memo;
+
+	public PayResult(Map&lt;String, String&gt; rawResult) {
+	    if (rawResult == null) {
+	        return;
+	    }
+
+	    for (String key : rawResult.keySet()) {
+	        if (TextUtils.equals(key, &quot;resultStatus&quot;)) {
+	            resultStatus = rawResult.get(key);
+	        } else if (TextUtils.equals(key, &quot;result&quot;)) {
+	            result = rawResult.get(key);
+	        } else if (TextUtils.equals(key, &quot;memo&quot;)) {
+	            memo = rawResult.get(key);
+	        }
+	    }
+	}
+
+	@Override
+	public String toString() {
+	    return &quot;resultStatus={&quot; + resultStatus + &quot;};memo={&quot; + memo
+            + &quot;};result={&quot; + result + &quot;}&quot;;
+	}
+
+	/**
+	 * @return the resultStatus
+	 */
+	public String getResultStatus() {
+	    return resultStatus;
+	}
+
+	/**
+	 * @return the memo
+	 */
+	public String getMemo() {
+	    return memo;
+	}
+
+	/**
+	 * @return the result
+	 */
+	public String getResult() {
+	    return result;
+	}
+}
+</code></pre>
+<p><a href="https://yugoal.github.io/">个人博客地址</a></p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-wei-xin-zhi-fu/">
+              <h3 class="post-title">
+                下一篇：Android微信支付
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android生命周期组件Lifecycle遇上高德地图 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android生命周期组件Lifecycle遇上高德地图</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h1 id="前言">前言</h1>
+<p>最近在学习jetpack，正好项目中的地图方面的功能需要优化，所以正好使用Lifecycle优化下代码。</p>
+<h1 id="lifecycle-的作用">Lifecycle 的作用</h1>
+<p>Lifecycle 是具有生命周期感知能力的组件，这样可以解决activity和fragment中的生命周期问题。</p>
+<h1 id="lifecycle-的基本使用">Lifecycle 的基本使用</h1>
+<h3 id="一-导入依赖库">一、导入依赖库</h3>
+<pre><code>implementation &quot;androidx.lifecycle:lifecycle-runtime:2.1.0&quot;
+</code></pre>
+<h3 id="二-activity-继承appcompatactivity或自己实现lifecycleowner接口">二、 activity 继承AppCompatActivity或自己实现LifecycleOwner接口</h3>
+<p>因为项目中BaseActivity是继承的AppCompatActivity，所以这里就不实现LifecycleOwner接口了。</p>
+<h3 id="三-创建地图定位监听类amaplocationlistener">三、创建地图定位监听类AMapLocationListener</h3>
+<ol>
+<li>实现LifecycleObserver</li>
+</ol>
+<pre><code>public class AMapLocationListener implements LifecycleObserver {
+    
+}
+</code></pre>
+<ol start="2">
+<li>使<code>@OnLifecycleEvent</code>注解来表明功能所在的生命周期<code>Lifecycle.Event.ON_CREATE</code>对应<code>onCreate</code></li>
+</ol>
+<pre><code> @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    void createLocation(){
+        initLocation();
+        startLocation();
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    void destroyLocal(){
+        destroyLocation();
+    }
+</code></pre>
+<ol start="3">
+<li>最后在Activity中使用</li>
+</ol>
+<pre><code>    //添加定位监听
+   AMapLocationListener aMapLocationListener = new AMapLocationListener();
+   getLifecycle().addObserver(aMapLocationListener);
+</code></pre>
+<h2 id="下面放上完整代码">下面放上完整代码</h2>
+<p><code>AMapLocationListener</code></p>
+<pre><code>public class AMapLocationListener implements LifecycleObserver {
+    private AMapLocationClient locationClient;
+    //声明mLocationOption对象
+    private AMapLocationClientOption locationOption = null;
+
+    private LatLng myLatlng;
+
+
+    public LatLng getMyLatlng() {
+        return myLatlng;
+    }
+
+    private void setMyLatlng(LatLng myLatlng) {
+        this.myLatlng = myLatlng;
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    void createLocation(){
+        initLocation();
+        startLocation();
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    void destroyLocal(){
+        destroyLocation();
+    }
+
+    private void initLocation() {
+        //初始化client
+        locationClient = new AMapLocationClient(FPVDemoApplication.getContext());
+        locationOption = getDefaultOption();
+        //设置定位参数
+        locationClient.setLocationOption(locationOption);
+        // 设置定位监听
+        locationClient.setLocationListener(locationListener);
+    }
+
+    /**
+     * 默认的定位参数
+     */
+    private AMapLocationClientOption getDefaultOption() {
+        AMapLocationClientOption mOption = new AMapLocationClientOption();
+        mOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);//可选，设置定位模式，可选的模式有高精度、仅设备、仅网络。默认为高精度模式
+        mOption.setGpsFirst(true);//可选，设置是否gps优先，只在高精度模式下有效。默认关闭
+        mOption.setHttpTimeOut(30000);//可选，设置网络请求超时时间。默认为30秒。在仅设备模式下无效
+        mOption.setInterval(5 * 1000);//可选，设置定位间隔。默认为2秒
+        mOption.setNeedAddress(true);//可选，设置是否返回逆地理地址信息。默认是true
+        mOption.setOnceLocation(false);//可选，设置是否单次定位。默认是false
+        mOption.setOnceLocationLatest(false);//可选，设置是否等待wifi刷新，默认为false.如果设置为true,会自动变为单次定位，持续定位时不要使用
+        AMapLocationClientOption.setLocationProtocol(AMapLocationClientOption.AMapLocationProtocol.HTTP);//可选， 设置网络请求的协议。可选HTTP或者HTTPS。默认为HTTP
+        mOption.setSensorEnable(false);//可选，设置是否使用传感器。默认是false
+        mOption.setWifiScan(true); //可选，设置是否开启wifi扫描。默认为true，如果设置为false会同时停止主动刷新，停止以后完全依赖于系统刷新，定位位置可能存在误差
+        mOption.setLocationCacheEnable(true); //可选，设置是否使用缓存定位，默认为true
+        //mOption.setGeoLanguage(AMapLocationClientOption.GeoLanguage.DEFAULT);//可选，设置逆地理信息的语言，默认值为默认语言（根据所在地区选择语言）
+        return mOption;
+    }
+
+    /**
+     * 定位监听
+     */
+    com.amap.api.location.AMapLocationListener locationListener = new com.amap.api.location.AMapLocationListener() {
+        @Override
+        public void onLocationChanged(AMapLocation location) {
+            if (null != location) {
+
+                StringBuffer sb = new StringBuffer();
+                //errCode等于0代表定位成功，其他的为定位失败，具体的可以参照官网定位错误码说明
+                if (location.getErrorCode() == 0) {
+                    double lat = location.getLatitude();
+                    double lon = location.getLongitude();
+                    myLatlng = new LatLng(lat,lon);
+                    setMyLatlng(myLatlng);
+                } else {
+                    //定位失败
+                    sb.append(&quot;定位失败&quot; + &quot;\n&quot;);
+                    sb.append(&quot;错误码:&quot; + location.getErrorCode() + &quot;\n&quot;);
+                    sb.append(&quot;错误信息:&quot; + location.getErrorInfo() + &quot;\n&quot;);
+                    sb.append(&quot;错误描述:&quot; + location.getLocationDetail() + &quot;\n&quot;);
+                }
+            }
+        }
+    };
+
+    private void startLocation() {
+        // 启动定位
+        locationClient.startLocation();
+    }
+
+    /**
+     * 销毁定位
+     *
+     * @author hongming.wang
+     * @since 2.8.0
+     */
+    private void destroyLocation() {
+        if (null != locationClient) {
+            /**
+             * 如果AMapLocationClient是在当前Activity实例化的，
+             * 在Activity的onDestroy中一定要执行AMapLocationClient的onDestroy
+             */
+            //locationClient.disableBackgroundLocation(true);
+            locationClient.stopLocation();
+            locationClient.unRegisterLocationListener(locationListener);
+            locationClient.onDestroy();
+            locationClient = null;
+            locationOption = null;
+        }
+    }
+
+    /**
+     * 回到自己的定位
+     */
+    public void moveTolocation(AMap aMap) {
+        if (aMap != null &amp;&amp; myLatlng != null) {
+            //将地图移动到定位点
+            aMap.moveCamera(CameraUpdateFactory.changeLatLng(myLatlng));
+        }
+    }
+
+}
+</code></pre>
+<p><code>Activity</code>中使用</p>
+<pre><code>    //添加定位监听
+    AMapLocationListener aMapLocationListener = new AMapLocationListener();
+    getLifecycle().addObserver(aMapLocationListener);
+    btnLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                    aMapLocationListener.moveTolocation(amap);    
+                    }
+                });
+</code></pre>
+<h2 id="后续准备继续优化加上放大缩小或地图模式切换等功能">后续准备继续优化，加上放大缩小或地图模式切换等功能</h2>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-fang-di-da-qing-dan-zi-ding-yi-bu-ju-gua-pei-ruan-jian-pan-gao-du/">
+              <h3 class="post-title">
+                下一篇：Android仿滴答清单 自定义布局适配软键盘高度
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

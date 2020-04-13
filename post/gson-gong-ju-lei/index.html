@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Gson 工具类 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Gson 工具类</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <p>工具类主体</p>
+<pre><code>public class GsonUtil {
+
+    private static Gson gson = new GsonBuilder()
+            .registerTypeAdapter(Integer.class, new IntegerDefault0Adapter())
+            .registerTypeAdapter(int.class, new IntegerDefault0Adapter())
+            .registerTypeAdapter(Double.class, new DoubleDefault0Adapter())
+            .registerTypeAdapter(double.class, new DoubleDefault0Adapter())
+            .registerTypeAdapter(Long.class, new LongDefault0Adapter())
+            .registerTypeAdapter(long.class, new LongDefault0Adapter())
+            .create();
+
+    public static String toJson(Object value) {
+        return gson.toJson(value);
+    }
+
+    public static &lt;T&gt; T fromJson(String json, Class&lt;T&gt; classOfT) throws JsonParseException {
+        return gson.fromJson(json, classOfT);
+    }
+
+    public static &lt;T&gt; T fromJson(String json, Type typeOfT) throws JsonParseException {
+        return (T) gson.fromJson(json, typeOfT);
+    }
+}
+</code></pre>
+<p>注册类型适配器（int 举例）</p>
+<pre><code>public class IntegerDefault0Adapter implements JsonSerializer&lt;Integer&gt;, JsonDeserializer&lt;Integer&gt; {
+    @Override
+    public Integer deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+        try {
+            if (json.getAsString().equals(&quot;&quot;) || json.getAsString().equals(&quot;null&quot;)) {//定义为int类型,如果后台返回&quot;&quot;或者null,则返回0
+                return 0;
+            }
+        } catch (Exception ignore) {
+        }
+        try {
+            return json.getAsInt();
+        } catch (NumberFormatException e) {
+            throw new JsonSyntaxException(e);
+        }
+    }
+
+    @Override
+    public JsonElement serialize(Integer src, Type typeOfSrc, JsonSerializationContext context) {
+        return new JsonPrimitive(src);
+    }
+}
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-fang-di-da-qing-dan-zuo-hua-you-hua-xiao-guo/">
+              <h3 class="post-title">
+                下一篇：Android仿滴答清单左滑右滑效果
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

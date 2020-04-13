@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android计算任意多边形的面积 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android计算任意多边形的面积</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h2 id="需求">需求</h2>
+<p>线段：算出地图上线段的实际长度<br>
+面积：算出地图上不规则多边形的实际面积</p>
+<h2 id="解决方案">解决方案</h2>
+<p>####1.线段的实际长度<br>
+直接使用高德的AMapUtils.calculateLineDistance（latLng，latLng）方法计算。<br>
+####2.任意多边形面积的计算<br>
+思路：http://blog.csdn.net/xxdddail/article/details/48973269</p>
+<p>具体代码：</p>
+<pre><code> /**
+     * 计算任意多边形的面积
+     * @param latLngLines 经纬度坐标点
+     * @return
+     */
+    public float calculateArea(List&lt;LatLng&gt; latLngLines) {
+        List&lt;double[]&gt; pointFList = new ArrayList&lt;&gt;();
+        for (int i = 0; i &lt; latLngLines.size(); i++) {
+            LatLng latLng = latLngLines.get(i);
+            //经纬度转换成平面直角坐标系
+            pointFList.add(AMapUtil.WGS2flat(latLng.longitude, latLng.latitude));
+        }
+
+        int iCycle, iCount;
+        iCycle = 0;
+        double iArea = 0;
+        iCount = pointFList.size();
+
+        for (iCycle = 0; iCycle &lt; iCount; iCycle++) {
+            iArea = iArea + (pointFList.get(iCycle)[0] * pointFList.get((iCycle + 1) % iCount)[1] - pointFList.get((iCycle + 1) % iCount)[0] * pointFList.get(iCycle)[1]);
+        }
+
+        return (float) Math.abs(0.5 * iArea);
+    }
+</code></pre>
+<p>经纬度转平面直角坐标系</p>
+<pre><code> // 地球长半轴
+    public static final double EARTH_RADIUS = 6378.137;
+/**
+     * 经纬度转换成以米为单位的平面直角坐标
+     *
+     * @param lon 经度
+     * @param lat 纬度
+     * @return 平面直角坐标double型数组，以米为单位
+     */
+    public static double[] WGS2flat(double lon, double lat) {
+        double L = CalcRad(lon);
+        double l = L - CalcRad(120);
+        double B = CalcRad(lat);
+        double cosb = Math.cos(B);
+        double sinb = Math.sin(B);
+
+        double a = EARTH_RADIUS * 1000;
+        // 地球短半轴
+        double b = 6356752.3142451793;
+        double t = Math.tan(B);
+        // double r = 3600 * 180 / Math.PI;
+        double e2 = (Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(a, 2);
+        double e12 = (Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(b, 2);
+        double n2 = e12 * Math.pow(cosb, 2);
+        double N = a / Math.sqrt(1 - e2 * Math.pow(sinb, 2));
+
+        double x = 6367449.1458 * B - 32009.8185 * cosb * sinb - 133.9975
+                * cosb * Math.pow(sinb, 3) - 0.6975 * cosb * Math.pow(sinb, 5);
+        double X = x + N / 2 * t * Math.pow(cosb, 2) * Math.pow(l, 2) + N / 24
+                * t * Math.pow(cosb, 4)
+                * (5 - Math.pow(t, 2) + 9 * n2 + 4 * Math.pow(n2, 2))
+                * Math.pow(l, 4);
+        double Y = N * cosb * l + N / 6 * Math.pow(cosb, 3)
+                * (1 - Math.pow(t, 2) + n2) * Math.pow(l, 3);
+
+        double[] coord = {X, Y};
+        return coord;
+    }
+
+    /**
+     * 计算弧度
+     *
+     * @param d 以度为单位的经纬度数值
+     * @return 以弧度为单位的经纬度数值
+     */
+    public static double CalcRad(double d) {
+        return d * Math.PI / 180.0;
+    }
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/rabbitmq-android-ke-hu-duan/">
+              <h3 class="post-title">
+                下一篇：RabbitMQ—Android客户端
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

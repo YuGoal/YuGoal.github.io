@@ -1,0 +1,603 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android微信支付 | caoyu</title>
+<meta name="description" content="keep">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yugoal.github.io/favicon.ico?v=1586743683585">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yugoal.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yugoal.github.io">
+        <img class="avatar" src="https://yugoal.github.io/images/avatar.png?v=1586743683585" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yugoal.github.io">
+        <h1 class="site-title">caoyu</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android微信支付</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            
+          </div>
+          <div class="post-content">
+            <h2 id="前言">前言</h2>
+<p>最近公司App需要做微信支付这一块，然后就是被微信支付各种虐。所以觉得有必要把这痛苦的经历记录下来。</p>
+<h4 id="一发送商品订单给服务器然后从服务器获取支付请求参数">一.发送商品订单给服务器，然后从服务器获取支付请求参数</h4>
+<p><em>1.首先注册，其中api为IWXAPI的实例。</em></p>
+<pre><code>api=WXAPIFactory.createWXAPI(context,APP_ID,false);
+api.registerApp(APP_ID);
+</code></pre>
+<p><em>2.从服务端拿到必要参数后，调支付即可，其中params是自定义的用来保存从服务端获取的发起支付请求所需要的参数对象。</em></p>
+<pre><code>if(api!=null){
+if(isWXAppInstalled()){
+PayReqreq=newPayReq();
+req.appId=APP_ID;
+req.partnerId=params.getPartnerId();
+req.prepayId=params.getPrepayId();
+req.packageValue=params.getPackageValue();
+req.nonceStr=params.getNonceStr();
+req.timeStamp=params.getTimeStamp();
+req.sign=params.getSign();
+
+api.sendReq(req);
+}
+}
+</code></pre>
+<p><em>3.WXPayEntryActivity支付回调界面</em></p>
+<pre><code>public class WXPayEntryActivity extends Activity implements IWXAPIEventHandler {
+	private static final String TAG = &quot;WXPayEntryActivity&quot;;
+
+	private IWXAPI api;
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.pay_result);
+		api = WXAPIFactory.createWXAPI(this, Constants.APP_ID);
+		api.handleIntent(getIntent(), this);
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		setIntent(intent);
+		api.handleIntent(intent, this);
+	}
+
+	@Override
+	public void onReq(BaseReq req) {
+	}
+
+	@Override
+	public void onResp(BaseResp resp) {
+		Log.d(TAG, &quot;onPayFinish, errCode = &quot; + resp.errCode);
+
+		if (resp.getType() == ConstantsAPI.COMMAND_PAY_BY_WX) {
+			if(resp.errCode == 0){
+				MyToast.showToast(this,&quot;支付成功&quot;);
+			}else if(resp.errCode == -2){
+				MyToast.showToast(this,&quot;支付取消&quot;);
+			}
+			finish();
+		}
+	}
+}
+</code></pre>
+<p>####二.App获取预支付订单，然后发送请求<br>
+<em>1.预支付请求数据</em></p>
+<pre><code>/**
+     * 预支付请求数据
+     *
+     * @return
+     */
+    private String genProductArgs() {
+        StringBuffer xml = new StringBuffer();
+
+        try {
+            String nonceStr = genNonceStr();
+            xml.append(&quot;&lt;/xml&gt;&quot;);
+            List&lt;NameValuePair&gt; packageParams = new LinkedList&lt;NameValuePair&gt;();
+            packageParams.add(new BasicNameValuePair(&quot;appid&quot;, Constants.APP_ID));
+            packageParams.add(new BasicNameValuePair(&quot;body&quot;, xiaoqu_name+&quot;--&quot;+pay_name));
+            packageParams.add(new BasicNameValuePair(&quot;mch_id&quot;, Constants.MCH_ID));
+            packageParams.add(new BasicNameValuePair(&quot;nonce_str&quot;, nonceStr));
+            packageParams.add(new BasicNameValuePair(&quot;notify_url&quot;, &quot;http://weixin.qq.com&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;out_trade_no&quot;, genOutTradNo()));
+            packageParams.add(new BasicNameValuePair(&quot;spbill_create_ip&quot;, &quot;127.0.0.1&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;total_fee&quot;, pay_num));
+            packageParams.add(new BasicNameValuePair(&quot;trade_type&quot;, &quot;APP&quot;));
+
+            String sign = genPackageSign(packageParams);
+            packageParams.add(new BasicNameValuePair(&quot;sign&quot;, sign));
+
+            String xmlstring = toXml(packageParams);
+            return new String(xmlstring.toString().getBytes(), &quot;ISO8859-1&quot;);
+
+        } catch (Exception e) {
+            Log.e(TAG, &quot;genProductArgs fail, ex = &quot; + e.getMessage());
+            return null;
+        }
+    }
+</code></pre>
+<p><em>2.获取预支付订单</em></p>
+<pre><code>/**
+     * 异步获取预支付订单 prepay_id
+     */
+    private class GetPrepayIdTask extends AsyncTask&lt;Void, Void, Map&lt;String, String&gt;&gt; {
+
+        private ProgressDialog dialog;
+
+
+        @Override
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(PayOrderActivity.this, &quot;&quot;, getString(R.string.getting_prepayid));
+        }
+
+        @Override
+        protected void onPostExecute(Map&lt;String, String&gt; result) {
+            if (dialog != null) {
+                dialog.dismiss();
+            }
+            sb.append(&quot;prepay_id\n&quot; + result.get(&quot;prepay_id&quot;) + &quot;\n\n&quot;);
+            resultunifiedorder = result;
+        
+            //获取支付请求数据，发起支付请求
+            genPayReq();
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+        }
+
+        @Override
+        protected Map&lt;String, String&gt; doInBackground(Void... params) {
+
+            //获取预支付订单
+            String url = String.format(&quot;https://api.mch.weixin.qq.com/pay/unifiedorder&quot;);
+            String entity = genProductArgs();
+
+            Log.e(&quot;entity&quot;, entity);
+
+            byte[] buf = Util.httpPost(url, entity);
+
+            String content = new String(buf);
+            Log.e(&quot;content&quot;, content);
+            Map&lt;String, String&gt; xml = decodeXml(content);
+
+            return xml;
+        }
+    }
+</code></pre>
+<p><em>3.全部代码</em></p>
+<pre><code>public class PayOrderActivity extends BaseActivity {
+    private static final String TAG = &quot;PayOrderActivity&quot;;
+
+    @Bind(R.id.button)
+    Button button;
+
+    PayReq req;
+    final IWXAPI msgApi = WXAPIFactory.createWXAPI(this, null);
+    //	TextView show;
+    Map&lt;String, String&gt; resultunifiedorder;
+    StringBuffer sb;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_pay_order);
+        ButterKnife.bind(this);
+       
+        req = new PayReq();
+        sb = new StringBuffer();
+
+        msgApi.registerApp(Constants.APP_ID);
+
+
+    }
+
+    @OnClick({R.id.button})
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.button:
+                if(pay_id == null||pay_id.length()==0){
+                    MyToast.showToast(PayOrderActivity.this,&quot;请选择缴费类型&quot;);
+                }else {
+                    GetPrepayIdTask getPrepayId = new GetPrepayIdTask();
+                    getPrepayId.execute();
+                }
+                break;
+        }
+    }
+
+    /**
+     * 异步获取预支付订单 prepay_id
+     */
+    private class GetPrepayIdTask extends AsyncTask&lt;Void, Void, Map&lt;String, String&gt;&gt; {
+
+        private ProgressDialog dialog;
+
+
+        @Override
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(PayOrderActivity.this, &quot;&quot;, getString(R.string.getting_prepayid));
+        }
+
+        @Override
+        protected void onPostExecute(Map&lt;String, String&gt; result) {
+            if (dialog != null) {
+                dialog.dismiss();
+            }
+            sb.append(&quot;prepay_id\n&quot; + result.get(&quot;prepay_id&quot;) + &quot;\n\n&quot;);
+//			show.setText(sb.toString());
+
+            resultunifiedorder = result;
+            genPayReq();
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+        }
+
+        @Override
+        protected Map&lt;String, String&gt; doInBackground(Void... params) {
+
+            //获取预支付订单
+            String url = String.format(&quot;https://api.mch.weixin.qq.com/pay/unifiedorder&quot;);
+            String entity = genProductArgs();
+
+            Log.e(&quot;entity&quot;, entity);
+
+            byte[] buf = Util.httpPost(url, entity);
+
+            String content = new String(buf);
+            Log.e(&quot;content&quot;, content);
+            Map&lt;String, String&gt; xml = decodeXml(content);
+
+            return xml;
+        }
+    }
+
+
+    /**
+     * 获取支付请求数据，发起支付请求
+     */
+    private void genPayReq() {
+        req.appId = Constants.APP_ID;
+        req.partnerId = Constants.MCH_ID;
+        req.prepayId = resultunifiedorder.get(&quot;prepay_id&quot;);
+        req.packageValue = &quot;Sign=WXPay&quot;;
+        req.nonceStr = genNonceStr();
+        req.timeStamp = String.valueOf(genTimeStamp());
+
+
+        List&lt;NameValuePair&gt; signParams = new LinkedList&lt;NameValuePair&gt;();
+        signParams.add(new BasicNameValuePair(&quot;appid&quot;, req.appId));
+        signParams.add(new BasicNameValuePair(&quot;noncestr&quot;, req.nonceStr));
+        signParams.add(new BasicNameValuePair(&quot;package&quot;, req.packageValue));
+        signParams.add(new BasicNameValuePair(&quot;partnerid&quot;, req.partnerId));
+        signParams.add(new BasicNameValuePair(&quot;prepayid&quot;, req.prepayId));
+        signParams.add(new BasicNameValuePair(&quot;timestamp&quot;, req.timeStamp));
+
+        req.sign = genAppSign(signParams);
+
+        sb.append(&quot;sign\n&quot; + req.sign + &quot;\n\n&quot;);
+        //SPUtil.put(this, &quot;uid&quot;, req.prepayId);
+//		show.setText(sb.toString());
+        sendPayReq();
+        Log.e(&quot;PayReq&quot;, signParams.toString());
+    }
+
+    /**
+     * 支付请求签名
+     *
+     * @param params
+     * @return
+     */
+    private String genAppSign(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(params.get(i).getName());
+            sb.append('=');
+            sb.append(params.get(i).getValue());
+            sb.append('&amp;');
+        }
+        sb.append(&quot;key=&quot;);
+        sb.append(Constants.API_KEY);
+
+        this.sb.append(&quot;sign str\n&quot; + sb.toString() + &quot;\n\n&quot;);
+        String appSign = MD5.getMessageDigest(sb.toString().getBytes()).toUpperCase();
+        Log.e(&quot;orion&quot;, appSign);
+        return appSign;
+    }
+
+    /**
+     * 预支付请求数据
+     *
+     * @return
+     */
+    private String genProductArgs() {
+        StringBuffer xml = new StringBuffer();
+
+        try {
+            String nonceStr = genNonceStr();
+
+
+            xml.append(&quot;&lt;/xml&gt;&quot;);
+            List&lt;NameValuePair&gt; packageParams = new LinkedList&lt;NameValuePair&gt;();
+            packageParams.add(new BasicNameValuePair(&quot;appid&quot;, Constants.APP_ID));
+            packageParams.add(new BasicNameValuePair(&quot;body&quot;, &quot;测试商品&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;mch_id&quot;, Constants.MCH_ID));
+            packageParams.add(new BasicNameValuePair(&quot;nonce_str&quot;, nonceStr));
+            packageParams.add(new BasicNameValuePair(&quot;notify_url&quot;, &quot;http://weixin.qq.com&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;out_trade_no&quot;, genOutTradNo()));
+            packageParams.add(new BasicNameValuePair(&quot;spbill_create_ip&quot;, &quot;127.0.0.1&quot;));
+            packageParams.add(new BasicNameValuePair(&quot;total_fee&quot;, pay_num));
+            packageParams.add(new BasicNameValuePair(&quot;trade_type&quot;, &quot;APP&quot;));
+
+
+            String sign = genPackageSign(packageParams);
+            packageParams.add(new BasicNameValuePair(&quot;sign&quot;, sign));
+
+
+            String xmlstring = toXml(packageParams);
+            return new String(xmlstring.toString().getBytes(), &quot;ISO8859-1&quot;);
+
+        } catch (Exception e) {
+            Log.e(TAG, &quot;genProductArgs fail, ex = &quot; + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 随机字符串
+     *
+     * @return
+     */
+    private String genNonceStr() {
+        Random random = new Random();
+        return MD5.getMessageDigest(String.valueOf(random.nextInt(10000)).getBytes());
+    }
+
+    /**
+     * 订单时间
+     *
+     * @return
+     */
+    private long genTimeStamp() {
+        return System.currentTimeMillis() / 1000;
+    }
+
+
+    /**
+     * 随机产生商户订单号
+     *
+     * @return
+     */
+    private String genOutTradNo() {
+        Random random = new Random();
+        u_id = MD5.getMessageDigest(String.valueOf(random.nextInt(10000)).getBytes());
+        return u_id;
+    }
+
+    /**
+     * 生成签名 获取预支付订单签名
+     */
+    private String genPackageSign(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(params.get(i).getName());
+            sb.append('=');
+            sb.append(params.get(i).getValue());
+            sb.append('&amp;');
+        }
+        sb.append(&quot;key=&quot;);
+        sb.append(Constants.API_KEY);
+
+
+        String packageSign = MD5.getMessageDigest(sb.toString().getBytes()).toUpperCase();
+        Log.e(&quot;orion&quot;, packageSign);
+        return packageSign;
+    }
+
+    /**
+     * 参数转xml
+     *
+     * @param params
+     * @return
+     */
+    private String toXml(List&lt;NameValuePair&gt; params) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(&quot;&lt;xml&gt;&quot;);
+        for (int i = 0; i &lt; params.size(); i++) {
+            sb.append(&quot;&lt;&quot; + params.get(i).getName() + &quot;&gt;&quot;);
+
+
+            sb.append(params.get(i).getValue());
+            sb.append(&quot;&lt;/&quot; + params.get(i).getName() + &quot;&gt;&quot;);
+        }
+        sb.append(&quot;&lt;/xml&gt;&quot;);
+
+        Log.e(&quot;orion&quot;, sb.toString());
+        return sb.toString();
+    }
+
+    /**
+     * xml 转Map
+     *
+     * @param content
+     * @return
+     */
+    public Map&lt;String, String&gt; decodeXml(String content) {
+
+        try {
+            Map&lt;String, String&gt; xml = new HashMap&lt;String, String&gt;();
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(new StringReader(content));
+            int event = parser.getEventType();
+            while (event != XmlPullParser.END_DOCUMENT) {
+
+                String nodeName = parser.getName();
+                switch (event) {
+                    case XmlPullParser.START_DOCUMENT:
+
+                        break;
+                    case XmlPullParser.START_TAG:
+
+                        if (&quot;xml&quot;.equals(nodeName) == false) {
+                            //实例化student对象
+                            xml.put(nodeName, parser.nextText());
+                        }
+                        break;
+                    case XmlPullParser.END_TAG:
+                        break;
+                }
+                event = parser.next();
+            }
+
+            return xml;
+        } catch (Exception e) {
+            Log.e(&quot;orion&quot;, e.toString());
+        }
+        return null;
+
+    }
+
+    /**
+     * 发起支付请求
+     */
+    private void sendPayReq() {
+        msgApi.registerApp(Constants.APP_ID);
+        msgApi.sendReq(req);
+    }
+}
+</code></pre>
+<h2 id="接下来就是踩坑">接下来就是踩坑</h2>
+<blockquote>
+<p>1.微信支付官方demo提供的接口，每个微信账号只能调用一次，再次调用时支付返回code值为-1（貌似是因为签名的原因）</p>
+</blockquote>
+<hr>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yugoal.github.io/post/android-sheng-ming-zhou-qi-zu-jian-lifecycle-yu-shang-gao-de-di-tu/">
+              <h3 class="post-title">
+                下一篇：Android生命周期组件Lifecycle遇上高德地图
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">keep</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yugoal.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>
