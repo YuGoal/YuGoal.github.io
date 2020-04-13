@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://caoyu.github.io</id>
+    <id>https://yugoal.github.io</id>
     <title>caoyu</title>
-    <updated>2020-04-13T01:54:33.732Z</updated>
+    <updated>2020-04-13T01:56:38.532Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://caoyu.github.io"/>
-    <link rel="self" href="https://caoyu.github.io/atom.xml"/>
+    <link rel="alternate" href="https://yugoal.github.io"/>
+    <link rel="self" href="https://yugoal.github.io/atom.xml"/>
     <subtitle>keep</subtitle>
-    <logo>https://caoyu.github.io/images/avatar.png</logo>
-    <icon>https://caoyu.github.io/favicon.ico</icon>
+    <logo>https://yugoal.github.io/images/avatar.png</logo>
+    <icon>https://yugoal.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, caoyu</rights>
     <entry>
         <title type="html"><![CDATA[Hello Gridea]]></title>
-        <id>https://caoyu.github.io/post/hello-gridea/</id>
-        <link href="https://caoyu.github.io/post/hello-gridea/">
+        <id>https://yugoal.github.io/post/hello-gridea/</id>
+        <link href="https://yugoal.github.io/post/hello-gridea/">
         </link>
         <updated>2018-12-11T16:00:00.000Z</updated>
         <summary type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
