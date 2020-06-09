@@ -5,7 +5,7 @@
     
 <meta charset="utf-8" >
 
-<title>RabbitMQ—Android客户端 | caoyu</title>
+<title>2020还在使用svn的Android开发怎么Ignored Files | caoyu</title>
 <meta name="description" content="keep">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -80,65 +80,24 @@
       <div class="content-container">
         <div class="post-detail">
           
-          <h2 class="post-title">RabbitMQ—Android客户端</h2>
+          <h2 class="post-title">2020还在使用svn的Android开发怎么Ignored Files</h2>
           <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2020-04-13</span>
+            <span><i class="icon-calendar-outline"></i> 2020-05-21</span>
             
           </div>
           <div class="post-content">
-            <h2 id="工作原理">工作原理</h2>
-<p><a href="http://rabbitmq.mr-ping.com/description.html">RabbitMQ-中文文档</a><br>
-<a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ-官网</a><br>
-上面的网站详细的描述了整个框架。建议没接触过RabbitMQ的同学先看看。了解原理后，就直接看下面的代码吧。</p>
-<h2 id="生产者">生产者</h2>
-<p>由于后台缘故，这里不需要exchange。想要看完整的流程的同学可以去看<a href="http://www.jianshu.com/p/e138a79d726c">这篇文章</a>。<br>
-注意要在子线程中运行</p>
-<pre><code>        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(HOST);//ip地址
-        factory.setPort(PORT);//端口号
-        factory.setUsername(&quot;test&quot;);
-        factory.setPassword(&quot;test&quot;);
-        //创建一个新连接
-        Connection connection = factory.newConnection();
-        //创建一个通道
-        Channel channel = connection.createChannel();
-        //声明一个队列
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-        //发送消息
-        channel.basicPublish(&quot;&quot;, QUEUE_NAME, null, message.getBytes(&quot;UTF-8&quot;));
-        //消息发送完成后，需要关闭通道和连接
-        channel.close();
-        connection.close();
-</code></pre>
-<h2 id="消费者">消费者</h2>
-<pre><code>        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(HOST);
-        factory.setPort(PORT);
-        factory.setUsername(&quot;test&quot;);
-        factory.setPassword(&quot;test&quot;);
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-
-        //声明一个队列
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-        Consumer consumer = new DefaultConsumer(channel) {
-            @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                String message = new String(body, &quot;UTF-8&quot;);
-                System.out.println(&quot;RecvLogsTopic1 [x] Received '&quot; + envelope.getRoutingKey() + &quot;':'&quot; + message + &quot;'&quot;);
-            }
-        };
-        channel.basicConsume(QUEUE_NAME, true, consumer);
-</code></pre>
+            <p>Android studio 3.6之后移除了Ignored Files这个选项，Ignored最简单的方法就是在Project中选择文件夹或文件右键选择SubVersion-ignore就ok了。<br>
+已经添加的再选择可以移除<br>
+<img src="https://yugoal.github.io/post-images/1590047286741.png" alt="" loading="lazy"></p>
 
           </div>
         </div>
 
         
           <div class="next-post">
-            <a class="purple-link" href="https://yugoal.github.io/post/android-yuan-sheng-api-jin-xing-di-mian-bian-ma-yu-ni-di-li-bian-ma/">
+            <a class="purple-link" href="https://yugoal.github.io/post/gson-gong-ju-lei/">
               <h3 class="post-title">
-                下一篇：Android 原生Api进行地面编码与逆地理编码
+                下一篇：Gson 工具类
               </h3>
             </a>
           </div>

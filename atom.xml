@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://yugoal.github.io</id>
     <title>caoyu</title>
-    <updated>2020-04-13T02:08:09.624Z</updated>
+    <updated>2020-06-09T05:51:56.673Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://yugoal.github.io"/>
     <link rel="self" href="https://yugoal.github.io/atom.xml"/>
@@ -10,6 +10,17 @@
     <logo>https://yugoal.github.io/images/avatar.png</logo>
     <icon>https://yugoal.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, caoyu</rights>
+    <entry>
+        <title type="html"><![CDATA[2020还在使用svn的Android开发怎么Ignored Files]]></title>
+        <id>https://yugoal.github.io/post/2020-huan-zai-shi-yong-svn-de-android-kai-fa-zen-me-ignored-files/</id>
+        <link href="https://yugoal.github.io/post/2020-huan-zai-shi-yong-svn-de-android-kai-fa-zen-me-ignored-files/">
+        </link>
+        <updated>2020-05-21T07:41:21.000Z</updated>
+        <content type="html"><![CDATA[<p>Android studio 3.6之后移除了Ignored Files这个选项，Ignored最简单的方法就是在Project中选择文件夹或文件右键选择SubVersion-ignore就ok了。<br>
+已经添加的再选择可以移除<br>
+<img src="https://yugoal.github.io/post-images/1590047286741.png" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Gson 工具类]]></title>
         <id>https://yugoal.github.io/post/gson-gong-ju-lei/</id>
